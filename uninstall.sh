@@ -84,6 +84,30 @@ main() {
     summary+=("未在 $prefix 找到 dk (跳过)")
   fi
 
+  local serve_path="$prefix/serve.py"
+  if [ -e "$serve_path" ]; then
+    rm -f "$serve_path"
+    summary+=("已移除 $serve_path")
+  else
+    summary+=("未在 $prefix 找到 serve.py (跳过)")
+  fi
+
+  local oroio_dir="$HOME/.oroio"
+  if [ -d "$oroio_dir" ]; then
+    # 保留 keys.enc，清理其他文件
+    find "$oroio_dir" -type f ! -name 'keys.enc' -delete 2>/dev/null || true
+    # 删除空目录（web 目录等）
+    find "$oroio_dir" -type d -empty -delete 2>/dev/null || true
+    if [ -f "$oroio_dir/keys.enc" ]; then
+      summary+=("已清理 $oroio_dir（保留 keys.enc）")
+    else
+      rm -rf "$oroio_dir" 2>/dev/null || true
+      summary+=("已删除 $oroio_dir")
+    fi
+  else
+    summary+=("未找到 $oroio_dir (跳过)")
+  fi
+
   local rc_file
   rc_file=$(detect_shell_rc)
   if remove_alias "$rc_file"; then

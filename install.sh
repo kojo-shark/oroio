@@ -31,6 +31,8 @@ path_has() {
 
 DK_TMPDIR=""
 DK_SRC=""
+SERVE_SRC=""
+WEB_DIR=""
 
 make_tmpdir() {
   if [ -z "$DK_TMPDIR" ]; then
@@ -51,8 +53,23 @@ fetch_component() {
   printf -v "$out_var" '%s' "$dest"
 }
 
+fetch_web_assets() {
+  make_tmpdir
+  WEB_DIR="$DK_TMPDIR/web"
+  install -d "$WEB_DIR/assets"
+  
+  local base="https://github.com/notdp/oroio/releases/download/web-dist"
+  printf '正在下载 web 资源...\n'
+  curl -fsSL "$base/index.html" -o "$WEB_DIR/index.html" || die "下载 index.html 失败"
+  curl -fsSL "$base/index.js" -o "$WEB_DIR/assets/index.js" || die "下载 index.js 失败"
+  curl -fsSL "$base/index.css" -o "$WEB_DIR/assets/index.css" || die "下载 index.css 失败"
+}
+
 locate_sources() {
-  fetch_component "dk" "https://raw.githubusercontent.com/notdp/oroio/main/bin/dk" DK_SRC
+  local base="https://raw.githubusercontent.com/notdp/oroio/main/bin"
+  fetch_component "dk" "$base/dk" DK_SRC
+  fetch_component "serve.py" "$base/serve.py" SERVE_SRC
+  fetch_web_assets
 }
 
 ALIAS_LINE="alias droid='dk run droid'"
@@ -114,8 +131,13 @@ main() {
   locate_sources
 
   install -d "$prefix"
-
   install -m 0755 "$DK_SRC" "$prefix/dk"
+  install -m 0755 "$SERVE_SRC" "$prefix/serve.py"
+
+  local oroio_dir="$HOME/.oroio"
+  local web_dest="$oroio_dir/web"
+  install -d "$web_dest"
+  cp -r "$WEB_DIR"/* "$web_dest/"
 
   local rc_file
   rc_file=$(detect_shell_rc)
@@ -126,6 +148,8 @@ main() {
 
   printf '\n安装完成:\n'
   printf '  - 已将 dk 安装到 %s/dk\n' "$prefix"
+  printf '  - 已将 serve.py 安装到 %s/serve.py\n' "$prefix"
+  printf '  - 已将 web 资源安装到 %s\n' "$web_dest"
   if ! path_has "$prefix"; then
     printf '  - 注意: %s 不在 PATH，请手动加入后再使用。\n' "$prefix"
   else

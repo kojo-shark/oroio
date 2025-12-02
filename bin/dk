@@ -3,9 +3,10 @@
 set -euo pipefail
 
 DKM_HOME="$HOME/.oroio"
-KEYS_FILE="$DKM_HOME/keys.tsv"   # 每行: key<TAB>label（label可为空）
-CURRENT_FILE="$DKM_HOME/current" # 保存当前key的行号（从1开始）
+KEYS_ENC_FILE="$DKM_HOME/keys.enc"   # 加密存储的 keys
+CURRENT_FILE="$DKM_HOME/current"     # 保存当前key的行号（从1开始）
 DKM_CACHE_FILE="$DKM_HOME/list_cache.b64"
+DKM_SALT="oroio"
 
 # 可调优的 curl 限制，避免长时间等待慢/无效请求
 DKM_CURL_MAX_TIME="${DKM_CURL_MAX_TIME:-4}"        # 单请求超时（秒）
@@ -28,6 +29,7 @@ Commands:
   current                show current key + export + clipboard
   use [index]            switch key (interactive if no index)
   run <cmd...>           run with key (auto-rotate on zero balance)
+  serve [start|stop|status]  web dashboard (default: start, port 15915)
   uninstall [options]    uninstall dk (wrapper around uninstall.sh)
   reinstall [options]    reinstall dk (wrapper around reinstall.sh)
   rm <index...>          remove keys
@@ -39,7 +41,7 @@ die() { echo "错误: $*" >&2; exit 1; }
 
 ensure_store() {
   mkdir -p "$DKM_HOME"
-  touch "$KEYS_FILE"
+  touch "$KEYS_ENC_FILE"
   if [ ! -s "$CURRENT_FILE" ]; then echo 1 >"$CURRENT_FILE"; fi
 }
 
@@ -55,11 +57,11 @@ mask_key() {
 
 hash_keys_file() {
   if command -v sha1sum >/dev/null 2>&1; then
-    sha1sum "$KEYS_FILE" 2>/dev/null | awk '{print $1}'
+    sha1sum "$KEYS_ENC_FILE" 2>/dev/null | awk '{print $1}'
   elif command -v shasum >/dev/null 2>&1; then
-    shasum -a 1 "$KEYS_FILE" 2>/dev/null | awk '{print $1}'
+    shasum -a 1 "$KEYS_ENC_FILE" 2>/dev/null | awk '{print $1}'
   else
-    md5 "$KEYS_FILE" 2>/dev/null | awk '{print $NF}'
+    md5 "$KEYS_ENC_FILE" 2>/dev/null | awk '{print $NF}'
   fi
 }
 
@@ -152,11 +154,13 @@ cache_save_infos() {
 }
 
 load_keys() {
-  mapfile -t KEYS < <(grep -v '^[[:space:]]*$' "$KEYS_FILE" || true)
+  mapfile -t KEYS < <(openssl enc -d -aes-256-cbc -pbkdf2 \
+    -in "$KEYS_ENC_FILE" -pass "pass:$DKM_SALT" 2>/dev/null | grep -v '^[[:space:]]*$' || true)
 }
 
 save_keys() {
-  printf "%s\n" "${KEYS[@]}" >"$KEYS_FILE"
+  printf "%s\n" "${KEYS[@]}" | openssl enc -aes-256-cbc -pbkdf2 -salt \
+    -out "$KEYS_ENC_FILE" -pass "pass:$DKM_SALT"
 }
 
 copy_to_clipboard() {
@@ -559,22 +563,24 @@ cmd_add() {
     esac
   done
   ensure_store
+  load_keys
   if (( file_mode )); then
     [ -f "$file" ] || die "文件不存在: $file"
     while IFS= read -r line; do
       line=${line%%#*}
       line=$(echo "$line" | xargs)
       [ -z "$line" ] && continue
-      echo -e "${line}\t" >>"$KEYS_FILE"
+      KEYS+=("${line}"$'\t')
     done <"$file"
   else
     [ $# -gt 0 ] || die "请提供至少一个key"
     for k in "$@"; do
-      echo -e "${k}\t" >>"$KEYS_FILE"
+      KEYS+=("${k}"$'\t')
     done
   fi
+  save_keys
   invalidate_cache
-  echo "已添加。当前共有 $(grep -cv '^[[:space:]]*$' "$KEYS_FILE") 个key。"
+  echo "已添加。当前共有 ${#KEYS[@]} 个key。"
 }
 
 cmd_list() {
@@ -1052,6 +1058,89 @@ cmd_uninstall() {
   fi
 }
 
+cmd_serve() {
+  local subcmd="${1:-start}"
+  shift 2>/dev/null || true
+
+  local port="${DKM_SERVE_PORT:-15915}"
+  local web_dir="$DKM_HOME/web"
+  local pid_file="$DKM_HOME/serve.pid"
+  local log_file="$DKM_HOME/serve.log"
+
+  case "$subcmd" in
+    start)
+      [ -d "$web_dir" ] || die "Web目录不存在: ${web_dir}，请先放置打包好的React应用"
+      [ -f "$web_dir/index.html" ] || die "未找到 $web_dir/index.html"
+
+      if [ -f "$pid_file" ]; then
+        local old_pid
+        old_pid=$(cat "$pid_file")
+        if kill -0 "$old_pid" 2>/dev/null; then
+          echo "服务已在运行 (PID: $old_pid)"
+          echo "访问: http://localhost:$port"
+          return 0
+        fi
+        rm -f "$pid_file"
+      fi
+
+      command -v python3 >/dev/null 2>&1 || die "缺少 python3"
+
+      local script_dir
+      script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+      local serve_script="$script_dir/serve.py"
+      local dk_script="$script_dir/dk"
+      [ -f "$serve_script" ] || die "未找到 serve.py"
+
+      nohup python3 "$serve_script" "$port" "$web_dir" "$DKM_HOME" "$dk_script" >"$log_file" 2>&1 &
+      local pid=$!
+      echo "$pid" >"$pid_file"
+      sleep 0.3
+
+      if kill -0 "$pid" 2>/dev/null; then
+        echo "Web服务已启动 (PID: $pid)"
+        echo "访问: http://localhost:$port"
+      else
+        rm -f "$pid_file"
+        die "启动失败，请检查日志: $log_file"
+      fi
+      ;;
+
+    stop)
+      if [ ! -f "$pid_file" ]; then
+        echo "服务未运行"
+        return 0
+      fi
+      local pid
+      pid=$(cat "$pid_file")
+      if kill -0 "$pid" 2>/dev/null; then
+        kill "$pid" 2>/dev/null
+        rm -f "$pid_file"
+        echo "服务已停止 (PID: $pid)"
+      else
+        rm -f "$pid_file"
+        echo "服务未运行（已清理旧PID文件）"
+      fi
+      ;;
+
+    status)
+      if [ -f "$pid_file" ]; then
+        local pid
+        pid=$(cat "$pid_file")
+        if kill -0 "$pid" 2>/dev/null; then
+          echo "服务运行中 (PID: $pid)"
+          echo "访问: http://localhost:$port"
+          return 0
+        fi
+      fi
+      echo "服务未运行"
+      ;;
+
+    *)
+      die "用法: dk serve [start|stop|status]"
+      ;;
+  esac
+}
+
 main() {
   local cmd="${1:-help}"; shift || true
   case "$cmd" in
@@ -1060,6 +1149,7 @@ main() {
     current) cmd_current "$@";;
     use) cmd_use "$@";;
     run) cmd_run "$@";;
+    serve) cmd_serve "$@";;
     rm|remove|del) cmd_rm "$@";;
     uninstall) cmd_uninstall "$@";;
     reinstall) cmd_reinstall "$@";;
