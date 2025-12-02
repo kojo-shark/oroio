@@ -40,20 +40,24 @@ dk list
 droid
 ```
 
+`dk list` 效果如下：
+
+![CLI](imgs/cli.png)
+
 ## 命令
 
-| 命令 | 说明 |
-|------|------|
-| `dk add <key...>` | 添加一个或多个 API 密钥 |
-| `dk add --file <路径>` | 从文件导入密钥 |
-| `dk list` | 显示所有密钥的用量和到期时间 |
-| `dk current` | 显示当前密钥并复制 export 命令 |
-| `dk use <序号>` | 按序号切换密钥 |
-| `dk rm <序号...>` | 按序号删除密钥 |
-| `dk run <命令>` | 使用当前密钥运行命令（自动轮换） |
-| `dk serve` | 启动 Web 控制台（端口 15915） |
-| `dk reinstall` | 更新到最新版本 |
-| `dk uninstall` | 卸载 dk |
+| 命令                   | 说明                             |
+| ---------------------- | -------------------------------- |
+| `dk add <key...>`      | 添加一个或多个 API 密钥          |
+| `dk add --file <路径>` | 从文件导入密钥                   |
+| `dk list`              | 显示所有密钥的用量和到期时间     |
+| `dk current`           | 显示当前密钥并复制 export 命令   |
+| `dk use <序号>`        | 按序号切换密钥                   |
+| `dk rm <序号...>`      | 按序号删除密钥                   |
+| `dk run <命令>`        | 使用当前密钥运行命令（自动轮换） |
+| `dk serve`             | 启动 Web 控制台（端口 7758）     |
+| `dk reinstall`         | 更新到最新版本                   |
+| `dk uninstall`         | 卸载 dk                          |
 
 ## Web 控制台
 
@@ -63,7 +67,9 @@ dk serve stop   # 停止控制台
 dk serve status # 检查运行状态
 ```
 
-访问 `http://localhost:15915` 可视化查看和管理密钥。
+访问 `http://localhost:7758` 可视化查看和管理密钥。
+
+![Web Dashboard](imgs/web-dashboard.png)
 
 ## 安装详情
 

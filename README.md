@@ -40,6 +40,10 @@ dk list
 droid
 ```
 
+Here's what `dk list` looks like:
+
+![CLI](imgs/cli.png)
+
 ## Commands
 
 | Command | Description |
@@ -51,7 +55,7 @@ droid
 | `dk use <n>` | Switch to key by index |
 | `dk rm <n...>` | Remove keys by index |
 | `dk run <cmd>` | Run command with current key (auto-rotates) |
-| `dk serve` | Start web dashboard on port 15915 |
+| `dk serve` | Start web dashboard on port 7758 |
 | `dk reinstall` | Update to latest version |
 | `dk uninstall` | Remove dk |
 
@@ -63,7 +67,9 @@ dk serve stop   # Stop dashboard
 dk serve status # Check if running
 ```
 
-Access at `http://localhost:15915` to view and manage keys visually.
+Access at `http://localhost:7758` to view and manage keys visually.
+
+![Web Dashboard](imgs/web-dashboard.png)
 
 ## Installation Details
 

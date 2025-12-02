@@ -29,7 +29,7 @@ Commands:
   current                show current key + export + clipboard
   use [index]            switch key (interactive if no index)
   run <cmd...>           run with key (auto-rotate on zero balance)
-  serve [start|stop|status]  web dashboard (default: start, port 15915)
+  serve [start|stop|status]  web dashboard (default: start, port 7758)
   uninstall [options]    uninstall dk (wrapper around uninstall.sh)
   reinstall [options]    reinstall dk (wrapper around reinstall.sh)
   rm <index...>          remove keys
@@ -1062,7 +1062,7 @@ cmd_serve() {
   local subcmd="${1:-start}"
   shift 2>/dev/null || true
 
-  local port="${DKM_SERVE_PORT:-15915}"
+  local port="${DKM_SERVE_PORT:-7758}"
   local web_dir="$DKM_HOME/web"
   local pid_file="$DKM_HOME/serve.pid"
   local log_file="$DKM_HOME/serve.log"
