@@ -18,11 +18,19 @@ dk 集中管理多个 Factory Droid API 密钥，实时追踪用量和到期时�
 
 ### 安装
 
+**macOS / Linux：**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/notdp/oroio/main/install.sh | bash
 ```
 
-安装程序会在 shell 中添加 `droid` 别名。重启终端后直接运行 `droid` 即可。
+**Windows (PowerShell)：**
+
+```powershell
+irm https://raw.githubusercontent.com/notdp/oroio/main/install.ps1 | iex
+```
+
+安装程序会在 shell 中添加 `droid` 函数。重启终端后直接运行 `droid` 即可。
 
 ### 基本用法
 
@@ -79,7 +87,7 @@ dk serve status # 检查运行状态
 
 > **macOS**：安装后运行 `xattr -cr /Applications/oroio.app` 以绕过 Gatekeeper（应用未签名）。
 >
-> **注意**：桌面应用需要先安装 `dk` CLI。
+> **注意**：桌面应用可独立管理密钥。如需在终端使用 `droid`，请单独安装 CLI。
 
 ![alt text](assets/imgs/desktop.png)
 
@@ -87,20 +95,34 @@ dk serve status # 检查运行状态
 
 ### 安装内容
 
+**macOS / Linux：**
 - 可执行文件：`~/.local/bin/dk`
 - 数据目录：`~/.oroio/`
 - Shell 别名：`droid` → `dk run droid`
 
+**Windows：**
+- 脚本：`%LOCALAPPDATA%\oroio\bin\dk.ps1`
+- 数据目录：`%USERPROFILE%\.oroio\`
+- PowerShell 函数：`droid` → `dk run droid`
+
 ### 更新
 
 ```bash
-dk reinstall
+dk reinstall    # macOS/Linux
+```
+
+```powershell
+irm https://raw.githubusercontent.com/notdp/oroio/main/install.ps1 | iex  # Windows
 ```
 
 ### 卸载
 
 ```bash
-dk uninstall
+dk uninstall    # macOS/Linux
+```
+
+```powershell
+irm https://raw.githubusercontent.com/notdp/oroio/main/uninstall.ps1 | iex  # Windows
 ```
 
 ---

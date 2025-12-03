@@ -32,6 +32,20 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Smoke test dk.ps1 (Windows)
+        if: matrix.platform == 'win'
+        shell: pwsh
+        env:
+          USERPROFILE: '${{ runner.temp }}\oroio-test'
+          LOCALAPPDATA: '${{ runner.temp }}\oroio-test\AppData\Local'
+        run: |
+          New-Item -ItemType Directory -Path $env:LOCALAPPDATA -Force | Out-Null
+          ./bin/dk.ps1 add "sk-ci-1"
+          ./bin/dk.ps1 add "sk-ci-2"
+          ./bin/dk.ps1 use 2
+          $out = ./bin/dk.ps1 run pwsh -NoLogo -NoProfile -Command 'Write-Output $env:FACTORY_API_KEY'
+          if ($out.Trim() -ne 'sk-ci-2') { Write-Error "dk run failed: $out" }
+
       - name: Install web dependencies
         working-directory: web
         run: npm ci

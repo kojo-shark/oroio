@@ -1,19 +1,15 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 import * as crypto from 'crypto';
 
-const execAsync = promisify(exec);
-
 const OROIO_DIR = path.join(os.homedir(), '.oroio');
 const KEYS_FILE = path.join(OROIO_DIR, 'keys.enc');
 const CURRENT_FILE = path.join(OROIO_DIR, 'current');
 const CACHE_FILE = path.join(OROIO_DIR, 'list_cache.b64');
-const DK_PATH = path.join(os.homedir(), '.local', 'bin', 'dk');
 
 const SALT = 'oroio';
+const API_URL = 'https://app.factory.ai/api/organization/members/chat-usage';
 
 export interface KeyUsage {
   balance: number | null;
@@ -59,6 +55,40 @@ export async function decryptKeys(encryptedData: Buffer): Promise<string[]> {
   
   const text = decrypted.toString('utf8');
   return text.split('\n').filter(line => line.trim()).map(line => line.split('\t')[0]);
+}
+
+function encryptKeys(keys: string[]): Buffer {
+  const salt = crypto.randomBytes(8);
+  const { key, iv } = deriveKeyAndIV(salt);
+  
+  const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+  const text = keys.map(k => `${k}\t`).join('\n');
+  const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
+  
+  return Buffer.concat([Buffer.from('Salted__'), salt, encrypted]);
+}
+
+async function ensureStore(): Promise<void> {
+  try {
+    await fs.mkdir(OROIO_DIR, { recursive: true });
+  } catch {
+    // ignore
+  }
+}
+
+async function invalidateCache(): Promise<void> {
+  try {
+    await fs.unlink(CACHE_FILE);
+  } catch {
+    // ignore if not exists
+  }
+}
+
+async function saveKeys(keys: string[]): Promise<void> {
+  await ensureStore();
+  const encrypted = encryptKeys(keys);
+  await fs.writeFile(KEYS_FILE, encrypted);
+  await invalidateCache();
 }
 
 async function readEncryptedKeys(): Promise<Buffer> {
@@ -150,14 +180,126 @@ export async function getCurrentKey(): Promise<KeyInfo | null> {
   return keys.find(k => k.isCurrent) || null;
 }
 
+async function fetchUsage(key: string): Promise<KeyUsage> {
+  const result: KeyUsage = {
+    balance: 0,
+    total: 0,
+    used: 0,
+    expires: '?',
+    raw: '',
+  };
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+
+    const response = await fetch(API_URL, {
+      headers: {
+        'Authorization': `Bearer ${key}`,
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+      },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      result.raw = `http_${response.status}`;
+      result.expires = 'Invalid key';
+      return result;
+    }
+
+    const data = await response.json() as { usage?: any };
+    const usage = data.usage;
+
+    if (!usage) {
+      result.raw = 'no_usage';
+      return result;
+    }
+
+    const section = usage.standard || usage.premium || usage.total || usage.main;
+    if (section) {
+      const total = section.totalAllowance ?? section.basicAllowance ?? section.allowance;
+      let used = section.orgTotalTokensUsed ?? section.used ?? section.tokensUsed ?? 0;
+      used += section.orgOverageUsed ?? 0;
+
+      if (total != null) {
+        result.total = total;
+        result.used = used;
+        result.balance = total - used;
+      }
+    }
+
+    const expRaw = usage.endDate ?? usage.expire_at ?? usage.expires_at;
+    if (expRaw != null) {
+      if (typeof expRaw === 'number' || /^\d+$/.test(String(expRaw))) {
+        const ts = Number(expRaw) / 1000;
+        result.expires = new Date(ts * 1000).toISOString().split('T')[0];
+      } else {
+        result.expires = String(expRaw);
+      }
+    }
+  } catch (error: any) {
+    result.raw = 'fetch_error';
+    result.expires = 'Error';
+  }
+
+  return result;
+}
+
+async function writeCache(keys: string[], usages: KeyUsage[]): Promise<void> {
+  await ensureStore();
+  const now = Math.floor(Date.now() / 1000);
+  const keysHash = crypto.createHash('sha1').update(await fs.readFile(KEYS_FILE)).digest('hex');
+  
+  const lines = [String(now), keysHash];
+  for (let i = 0; i < usages.length; i++) {
+    const u = usages[i];
+    const info = [
+      `BALANCE=${u.balance ?? 0}`,
+      `BALANCE_NUM=${u.balance ?? 0}`,
+      `TOTAL=${u.total ?? 0}`,
+      `USED=${u.used ?? 0}`,
+      `EXPIRES=${u.expires}`,
+      `RAW=${u.raw}`,
+    ].join('\n');
+    const b64 = Buffer.from(info).toString('base64');
+    lines.push(`${i}\t${b64}`);
+  }
+  
+  await fs.writeFile(CACHE_FILE, lines.join('\n'));
+}
+
 export async function addKey(key: string): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const { stdout, stderr } = await execAsync(`"${DK_PATH}" add "${key}"`, { timeout: 10000 });
-    if (stderr) {
-      return { success: false, error: stderr.trim() };
+    await ensureStore();
+    let existingKeys: string[] = [];
+    let existingCache = new Map<number, KeyUsage>();
+    
+    try {
+      const data = await readEncryptedKeys();
+      existingKeys = await decryptKeys(data);
+      existingCache = await readCache();
+    } catch {
+      // no existing keys
     }
-    await refreshCache();
-    return { success: true, message: stdout.trim() };
+    
+    const newKeys = [...existingKeys, key];
+    
+    // Encrypt and save without invalidating cache
+    const encrypted = encryptKeys(newKeys);
+    await fs.writeFile(KEYS_FILE, encrypted);
+    
+    // Fetch usage for new key and append to cache
+    const newUsage = await fetchUsage(key);
+    const usages: KeyUsage[] = [];
+    for (let i = 0; i < existingKeys.length; i++) {
+      usages.push(existingCache.get(i) || { balance: null, total: null, used: null, expires: '?', raw: '' });
+    }
+    usages.push(newUsage);
+    await writeCache(newKeys, usages);
+    
+    return { success: true, message: `已添加。当前共有 ${newKeys.length} 个key。` };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to add key' };
   }
@@ -165,11 +307,18 @@ export async function addKey(key: string): Promise<{ success: boolean; message?:
 
 export async function removeKey(index: number): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const { stdout, stderr } = await execAsync(`"${DK_PATH}" rm ${index}`, { timeout: 10000 });
-    if (stderr) {
-      return { success: false, error: stderr.trim() };
+    const data = await readEncryptedKeys();
+    const keys = await decryptKeys(data);
+    
+    if (index < 1 || index > keys.length) {
+      return { success: false, error: '序号超出范围' };
     }
-    return { success: true, message: stdout.trim() };
+    
+    const newKeys = keys.filter((_, i) => i + 1 !== index);
+    await saveKeys(newKeys);
+    await fs.writeFile(CURRENT_FILE, '1');
+    
+    return { success: true, message: `已删除，剩余 ${newKeys.length} 个key。` };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to remove key' };
   }
@@ -177,11 +326,17 @@ export async function removeKey(index: number): Promise<{ success: boolean; mess
 
 export async function useKey(index: number): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const { stdout, stderr } = await execAsync(`"${DK_PATH}" use ${index}`, { timeout: 10000 });
-    if (stderr) {
-      return { success: false, error: stderr.trim() };
+    const data = await readEncryptedKeys();
+    const keys = await decryptKeys(data);
+    
+    if (index < 1 || index > keys.length) {
+      return { success: false, error: '序号超出范围' };
     }
-    return { success: true, message: stdout.trim() };
+    
+    await ensureStore();
+    await fs.writeFile(CURRENT_FILE, String(index));
+    
+    return { success: true, message: `已切换到序号 ${index}` };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to switch key' };
   }
@@ -189,7 +344,12 @@ export async function useKey(index: number): Promise<{ success: boolean; message
 
 export async function refreshCache(): Promise<{ success: boolean; error?: string }> {
   try {
-    await execAsync(`"${DK_PATH}" list`, { timeout: 30000 });
+    const data = await readEncryptedKeys();
+    const keys = await decryptKeys(data);
+    
+    const usages = await Promise.all(keys.map(k => fetchUsage(k)));
+    await writeCache(keys, usages);
+    
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to refresh' };

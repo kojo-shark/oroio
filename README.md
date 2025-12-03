@@ -18,11 +18,19 @@ dk manages multiple Factory Droid API keys in one place. It tracks usage limits 
 
 ### Install
 
+**macOS / Linux:**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/notdp/oroio/main/install.sh | bash
 ```
 
-The installer adds a `droid` alias to your shell. Restart your terminal, then just run `droid`.
+**Windows (PowerShell):**
+
+```powershell
+irm https://raw.githubusercontent.com/notdp/oroio/main/install.ps1 | iex
+```
+
+The installer adds a `droid` function to your shell. Restart your terminal, then just run `droid`.
 
 ### Basic Workflow
 
@@ -79,7 +87,7 @@ Download from [Releases](https://github.com/notdp/oroio/releases/tag/electron-di
 
 > **macOS**: After installing, run `xattr -cr /Applications/oroio.app` to bypass Gatekeeper (app is unsigned).
 >
-> **Note**: The desktop app requires the `dk` CLI to be installed first.
+> **Note**: The desktop app works standalone for key management. To use `droid` in terminal, install the CLI separately.
 
 ![alt text](assets/imgs/desktop.png)
 
@@ -87,20 +95,34 @@ Download from [Releases](https://github.com/notdp/oroio/releases/tag/electron-di
 
 ### What Gets Installed
 
+**macOS / Linux:**
 - Binary: `~/.local/bin/dk`
 - Data: `~/.oroio/`
 - Shell alias: `droid` → `dk run droid`
 
+**Windows:**
+- Script: `%LOCALAPPDATA%\oroio\bin\dk.ps1`
+- Data: `%USERPROFILE%\.oroio\`
+- PowerShell function: `droid` → `dk run droid`
+
 ### Updating
 
 ```bash
-dk reinstall
+dk reinstall    # macOS/Linux
+```
+
+```powershell
+irm https://raw.githubusercontent.com/notdp/oroio/main/install.ps1 | iex  # Windows
 ```
 
 ### Uninstalling
 
 ```bash
-dk uninstall
+dk uninstall    # macOS/Linux
+```
+
+```powershell
+irm https://raw.githubusercontent.com/notdp/oroio/main/uninstall.ps1 | iex  # Windows
 ```
 
 ---
