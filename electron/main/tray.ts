@@ -7,7 +7,7 @@ let tray: Tray | null = null;
 
 function getTrayIcon(): NativeImage {
   const iconPath = app.isPackaged
-    ? path.join(process.resourcesPath, 'app.asar.unpacked', 'assets', 'trayTemplate.png')
+    ? path.join(process.resourcesPath, 'assets', 'trayTemplate.png')
     : path.join(__dirname, '..', '..', 'assets', 'trayTemplate.png');
   
   const icon = nativeImage.createFromPath(iconPath);

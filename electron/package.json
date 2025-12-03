@@ -45,6 +45,10 @@
       {
         "from": "../web/dist",
         "to": "web"
+      },
+      {
+        "from": "assets",
+        "to": "assets"
       }
     ],
     "mac": {
