@@ -14,20 +14,33 @@ SALT = b"oroio"
 ITERATIONS = 10000
 
 def _ensure_crypto():
-    """确保加密库可用，Windows 上自动安装 pycryptodome"""
+    """确保加密库可用，自动安装 pycryptodome"""
     try:
         from cryptography.hazmat.primitives.ciphers import Cipher
-        return
+        return True
     except ImportError:
         pass
     try:
         from Crypto.Cipher import AES
-        return
+        return True
     except ImportError:
         pass
-    if os.name == 'nt':
+    # 尝试安装 pycryptodome
+    try:
         subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-q', 'pycryptodome'],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # 安装后清除导入缓存并重试
+        import importlib
+        if 'Crypto' in sys.modules:
+            del sys.modules['Crypto']
+        if 'Crypto.Cipher' in sys.modules:
+            del sys.modules['Crypto.Cipher']
+        if 'Crypto.Cipher.AES' in sys.modules:
+            del sys.modules['Crypto.Cipher.AES']
+        from Crypto.Cipher import AES
+        return True
+    except Exception:
+        return False
 
 def derive_key_iv(salt: bytes) -> tuple:
     """PBKDF2 派生 key 和 iv，与 dk.ps1/dk 兼容"""
@@ -270,7 +283,9 @@ class OroioHandler(http.server.SimpleHTTPRequestHandler):
         pass
 
 def run(port, web_dir, oroio_dir, dk_path):
-    _ensure_crypto()
+    if not _ensure_crypto():
+        print("错误: 无法加载加密库，请手动安装: pip install pycryptodome", file=sys.stderr)
+        sys.exit(1)
     os.chdir(web_dir)
     
     handler = lambda *args, **kwargs: OroioHandler(
