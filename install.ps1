@@ -44,24 +44,6 @@ $ts = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 $dkPath = Join-Path $INSTALL_DIR "dk.ps1"
 Invoke-WebRequest -Uri "$DK_URL`?ts=$ts" -OutFile $dkPath -UseBasicParsing
 
-# Validate download (syntax check) to avoid corrupted file issues
-function Test-DkSyntax {
-    param([string]$Path)
-    $nullAst = $null
-    $errors = $null
-    [System.Management.Automation.Language.Parser]::ParseFile($Path, [ref]$nullAst, [ref]$errors) | Out-Null
-    return ($errors.Count -eq 0)
-}
-
-if (-not (Test-DkSyntax -Path $dkPath)) {
-    Write-Warn "Downloaded dk.ps1 failed syntax check, retrying once..."
-    $ts = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-    Invoke-WebRequest -Uri "$DK_URL`?ts=$ts" -OutFile $dkPath -UseBasicParsing
-    if (-not (Test-DkSyntax -Path $dkPath)) {
-        Write-Error "Failed to download a valid dk.ps1. Please check your network and retry."
-    }
-}
-
 # Add to PATH if not already
 $userPath = [Environment]::GetEnvironmentVariable("PATH", "User")
 if ($userPath -notlike "*$INSTALL_DIR*") {
