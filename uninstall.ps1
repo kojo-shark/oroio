@@ -68,7 +68,8 @@ if (Test-Path $profilePath) {
     $content = Get-Content $profilePath -Raw
     if ($content -like "*# dk (droid key manager)*") {
         Write-Info "Removing PowerShell profile entries..."
-        $newContent = $content -replace "(?s)\r?\n# dk \(droid key manager\).*?# end dk\r?\n", ""
+        # 容忍在文件开头/结尾且无换行的情况
+        $newContent = $content -replace "(?s)# dk \(droid key manager\).*?# end dk\r?\n?", ""
         Set-Content -Path $profilePath -Value $newContent -NoNewline
     }
 }
