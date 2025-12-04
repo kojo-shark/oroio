@@ -44,6 +44,10 @@ $ts = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 $dkPath = Join-Path $INSTALL_DIR "dk.ps1"
 Invoke-WebRequest -Uri "$DK_URL`?ts=$ts" -OutFile $dkPath -UseBasicParsing
 
+# Normalize encoding to UTF-8 with BOM for PowerShell 5 compatibility
+$dkContent = Get-Content $dkPath -Raw -Encoding UTF8
+Set-Content -Path $dkPath -Value $dkContent -Encoding UTF8
+
 # Add to PATH if not already
 $userPath = [Environment]::GetEnvironmentVariable("PATH", "User")
 if ($userPath -notlike "*$INSTALL_DIR*") {
