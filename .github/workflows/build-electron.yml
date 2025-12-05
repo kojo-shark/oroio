@@ -113,6 +113,7 @@ jobs:
             Pre-built desktop application for macOS, Windows, and Linux.
             
             **macOS**: Download `.dmg` (recommended) or `.zip` (extract and run directly)
+            > After installing, run `xattr -cr /Applications/oroio.app` to bypass Gatekeeper (app is unsigned).
             
             **Windows**: Download `.exe` installer
             
