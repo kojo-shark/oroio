@@ -22,17 +22,15 @@ body:
     validations:
       required: true
 
-  - type: dropdown
+  - type: checkboxes
     id: component
     attributes:
       label: 涉及模块
       options:
-        - CLI 命令行
-        - Web 控制台
-        - Electron 桌面端
-        - 安装/部署
-    validations:
-      required: true
+        - label: CLI 命令行
+        - label: Web 控制台
+        - label: Electron 桌面端
+        - label: 安装/部署
 
   - type: checkboxes
     id: contribution

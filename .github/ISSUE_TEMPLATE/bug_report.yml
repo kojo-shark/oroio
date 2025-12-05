@@ -21,27 +21,23 @@ body:
     validations:
       required: true
 
-  - type: dropdown
+  - type: checkboxes
     id: platform
     attributes:
       label: 操作系统
       options:
-        - macOS
-        - Windows (PowerShell)
-        - Linux
-    validations:
-      required: true
+        - label: macOS
+        - label: Windows
+        - label: Linux
 
-  - type: dropdown
+  - type: checkboxes
     id: component
     attributes:
       label: 问题模块
       options:
-        - CLI 命令行
-        - Web 控制台
-        - Electron 桌面端
-    validations:
-      required: true
+        - label: CLI 命令行
+        - label: Web 控制台
+        - label: Electron 桌面端
 
   - type: dropdown
     id: command
