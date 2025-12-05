@@ -425,6 +425,16 @@ class OroioHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json({'success': False, 'error': str(e)})
     
     # Commands handlers
+    def _parse_frontmatter(self, content):
+        """解析 frontmatter 中的 description"""
+        import re
+        match = re.match(r'^---\s*\n([\s\S]*?)\n---', content)
+        if match:
+            for line in match.group(1).split('\n'):
+                if line.startswith('description:'):
+                    return line[12:].strip()
+        return None
+
     def handle_list_commands(self):
         commands_dir = os.path.join(FACTORY_DIR, 'commands')
         commands = []
@@ -434,7 +444,15 @@ class OroioHandler(http.server.SimpleHTTPRequestHandler):
                 if entry.endswith('.md'):
                     full_path = os.path.join(real_dir, entry)
                     if os.path.isfile(full_path):
-                        commands.append({'name': entry[:-3], 'path': full_path})
+                        with open(full_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                        desc = self._parse_frontmatter(content)
+                        commands.append({
+                            'name': entry[:-3],
+                            'path': full_path,
+                            'description': desc,
+                            'content': content
+                        })
         except:
             pass
         self.send_json(commands)
@@ -546,12 +564,8 @@ class OroioHandler(http.server.SimpleHTTPRequestHandler):
                 config = json.load(f)
             if 'mcpServers' in config:
                 for name, server in config['mcpServers'].items():
-                    servers.append({
-                        'name': name,
-                        'command': server.get('command', ''),
-                        'args': server.get('args', []),
-                        'env': server.get('env', {})
-                    })
+                    item = {'name': name, **server}
+                    servers.append(item)
         except:
             pass
         self.send_json(servers)

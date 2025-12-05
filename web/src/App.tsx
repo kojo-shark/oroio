@@ -21,7 +21,12 @@ const tabs: { id: Tab; label: string; icon: typeof Key }[] = [
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('keys');
   const [mounted, setMounted] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('oroio-theme') as 'light' | 'dark') || 'light';
+    }
+    return 'light';
+  });
   const [fakePid] = useState(() => Math.floor(Math.random() * 9000) + 1000);
   const [fakeMemory] = useState(() => Math.floor(Math.random() * 50) + 20);
 
@@ -44,6 +49,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    localStorage.setItem('oroio-theme', theme);
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
