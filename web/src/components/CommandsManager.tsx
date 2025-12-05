@@ -34,7 +34,7 @@ function CommandCard({ cmd, onEdit, onDelete, onCopy, copiedCommand }: {
         >
           {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </button>
-        
+
         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setExpanded(!expanded)}>
           <div className="flex items-center gap-3">
             <code className="text-sm font-semibold font-mono text-foreground">/{cmd.name}</code>
@@ -213,21 +213,38 @@ export default function CommandsManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">Commands</h1>
-          <p className="text-muted-foreground">
-            Custom slash commands <span className="text-muted-foreground/50">·</span> {commands.length} {commands.length === 1 ? 'command' : 'commands'}
-          </p>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex flex-wrap gap-2 md:gap-4">
+          <div className="px-4 py-2 border border-border bg-card/50 min-w-[140px]">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Total Commands</div>
+            <div className="text-xl font-bold font-mono text-primary">
+              {commands.length.toString().padStart(2, '0')} <span className="text-[10px] text-muted-foreground font-normal">CMDS</span>
+            </div>
+          </div>
+
+          <div className="px-4 py-2 border border-border bg-card/50 min-w-[140px]">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">System Status</div>
+            <div className="text-xl font-bold font-mono text-primary">
+              READY <span className="text-[10px] text-muted-foreground font-normal">RW</span>
+            </div>
+          </div>
+
+          <div className="px-4 py-2 border border-border bg-card/50 min-w-[140px]">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Type</div>
+            <div className="text-xl font-bold font-mono text-foreground">
+              SLASH <span className="text-[10px] text-muted-foreground font-normal">V1</span>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 ml-auto">
           <Button variant="outline" size="sm" onClick={loadCommands}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+            REFRESH
           </Button>
           <Button size="sm" onClick={() => setAddDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            New Command
+            NEW COMMAND
           </Button>
         </div>
       </div>

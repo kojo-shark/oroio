@@ -119,21 +119,38 @@ export default function McpManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">MCP Servers</h1>
-          <p className="text-muted-foreground">
-            Model Context Protocol servers <span className="text-muted-foreground/50">·</span> {servers.length} {servers.length === 1 ? 'server' : 'servers'}
-          </p>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex flex-wrap gap-2 md:gap-4">
+          <div className="px-4 py-2 border border-border bg-card/50 min-w-[140px]">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Total Servers</div>
+            <div className="text-xl font-bold font-mono text-primary">
+              {servers.length.toString().padStart(2, '0')} <span className="text-[10px] text-muted-foreground font-normal">MCP</span>
+            </div>
+          </div>
+
+          <div className="px-4 py-2 border border-border bg-card/50 min-w-[140px]">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">STDIO</div>
+            <div className="text-xl font-bold font-mono text-primary">
+              {servers.filter(s => s.type !== 'http').length.toString().padStart(2, '0')} <span className="text-[10px] text-muted-foreground font-normal">PIPE</span>
+            </div>
+          </div>
+
+          <div className="px-4 py-2 border border-border bg-card/50 min-w-[140px]">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">HTTP</div>
+            <div className="text-xl font-bold font-mono text-foreground">
+              {servers.filter(s => s.type === 'http').length.toString().padStart(2, '0')} <span className="text-[10px] text-muted-foreground font-normal">NET</span>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 ml-auto">
           <Button variant="outline" size="sm" onClick={loadServers}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+            REFRESH
           </Button>
           <Button size="sm" onClick={() => setAddDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Server
+            ADD SERVER
           </Button>
         </div>
       </div>

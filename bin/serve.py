@@ -239,6 +239,10 @@ class OroioHandler(http.server.SimpleHTTPRequestHandler):
             self.handle_create_command(data)
         elif path == '/api/commands/delete':
             self.handle_delete_command(data)
+        elif path == '/api/commands/content':
+            self.handle_command_content(data)
+        elif path == '/api/commands/update':
+            self.handle_update_command(data)
         # Droids
         elif path == '/api/droids/list':
             self.handle_list_droids()
@@ -253,6 +257,8 @@ class OroioHandler(http.server.SimpleHTTPRequestHandler):
             self.handle_add_mcp(data)
         elif path == '/api/mcp/remove':
             self.handle_remove_mcp(data)
+        elif path == '/api/mcp/update':
+            self.handle_update_mcp(data)
         else:
             self.send_error(404, 'Not Found')
     
@@ -453,6 +459,35 @@ class OroioHandler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             self.send_json({'success': False, 'error': str(e)})
     
+    def handle_command_content(self, data):
+        name = data.get('name', '').strip()
+        if not name:
+            self.send_json({'error': 'Name is required'})
+            return
+        try:
+            commands_dir = os.path.join(FACTORY_DIR, 'commands')
+            real_dir = os.path.realpath(commands_dir)
+            with open(os.path.join(real_dir, f'{name}.md'), 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.send_json({'content': content})
+        except Exception as e:
+            self.send_json({'error': str(e)})
+    
+    def handle_update_command(self, data):
+        name = data.get('name', '').strip()
+        content = data.get('content', '')
+        if not name:
+            self.send_json({'success': False, 'error': 'Name is required'})
+            return
+        try:
+            commands_dir = os.path.join(FACTORY_DIR, 'commands')
+            real_dir = os.path.realpath(commands_dir)
+            with open(os.path.join(real_dir, f'{name}.md'), 'w', encoding='utf-8') as f:
+                f.write(content)
+            self.send_json({'success': True})
+        except Exception as e:
+            self.send_json({'success': False, 'error': str(e)})
+    
     # Droids handlers
     def handle_list_droids(self):
         droids_dir = os.path.join(FACTORY_DIR, 'droids')
@@ -552,6 +587,30 @@ class OroioHandler(http.server.SimpleHTTPRequestHandler):
                 del config['mcpServers'][name]
                 with open(mcp_file, 'w') as f:
                     json.dump(config, f, indent=2)
+            self.send_json({'success': True})
+        except Exception as e:
+            self.send_json({'success': False, 'error': str(e)})
+    
+    def handle_update_mcp(self, data):
+        name = data.get('name', '').strip()
+        server_config = data.get('config', {})
+        if not name:
+            self.send_json({'success': False, 'error': 'Name is required'})
+            return
+        try:
+            mcp_file = os.path.join(FACTORY_DIR, 'mcp.json')
+            config = {'mcpServers': {}}
+            try:
+                with open(mcp_file, 'r') as f:
+                    config = json.load(f)
+                if 'mcpServers' not in config:
+                    config['mcpServers'] = {}
+            except:
+                pass
+            config['mcpServers'][name] = server_config
+            os.makedirs(FACTORY_DIR, exist_ok=True)
+            with open(mcp_file, 'w') as f:
+                json.dump(config, f, indent=2)
             self.send_json({'success': True})
         except Exception as e:
             self.send_json({'success': False, 'error': str(e)})

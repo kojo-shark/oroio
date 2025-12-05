@@ -92,23 +92,40 @@ export default function DroidsManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">Droids</h1>
-          <p className="text-muted-foreground">
-            Custom sub-agents <span className="text-muted-foreground/50">·</span> {droids.length} {droids.length === 1 ? 'droid' : 'droids'}
-          </p>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex flex-wrap gap-2 md:gap-4">
+          <div className="px-4 py-2 border border-border bg-card/50 min-w-[140px]">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Total Droids</div>
+            <div className="text-xl font-bold font-mono text-primary">
+              {droids.length.toString().padStart(2, '0')} <span className="text-[10px] text-muted-foreground font-normal">BOTS</span>
+            </div>
+          </div>
+
+          <div className="px-4 py-2 border border-border bg-card/50 min-w-[140px]">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Status</div>
+            <div className="text-xl font-bold font-mono text-primary">
+              IDLE <span className="text-[10px] text-muted-foreground font-normal">WAITING</span>
+            </div>
+          </div>
+
+          <div className="px-4 py-2 border border-border bg-card/50 min-w-[140px]">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Mode</div>
+            <div className="text-xl font-bold font-mono text-foreground">
+              DOCKER <span className="text-[10px] text-muted-foreground font-normal">V2</span>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 ml-auto">
           <Button variant="outline" size="sm" onClick={loadDroids}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+            REFRESH
           </Button>
           <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-2" />
-                New Droid
+                NEW DROID
               </Button>
             </DialogTrigger>
             <DialogContent>

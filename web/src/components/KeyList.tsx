@@ -33,20 +33,20 @@ function UsageCell({ usage }: { usage: KeyUsage | null }) {
   if (!usage || usage.total === null) {
     return <span className="text-muted-foreground">-</span>;
   }
-  
+
   const used = usage.used ?? 0;
   const total = usage.total;
   const isLow = usage.balance != null && total > 0 && usage.balance / total <= 0.1;
   const isZero = usage.balance != null && usage.balance <= 0;
-  
+
   return (
     <div className="flex flex-col gap-1 min-w-[180px]">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>{formatNumber(used)} / {formatNumber(total)}</span>
       </div>
-      <Progress 
-        value={used} 
-        max={total} 
+      <Progress
+        value={used}
+        max={total}
         className="w-full h-2"
         indicatorClassName={isZero ? 'bg-destructive' : isLow ? 'bg-yellow-500' : 'bg-green-500'}
       />
@@ -56,7 +56,7 @@ function UsageCell({ usage }: { usage: KeyUsage | null }) {
 
 function KeyDisplay({ keyText, isCurrent, className }: { keyText: string, isCurrent: boolean, className?: string }) {
   const [copied, setCopied] = useState(false);
-  
+
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await navigator.clipboard.writeText(keyText);
@@ -65,7 +65,7 @@ function KeyDisplay({ keyText, isCurrent, className }: { keyText: string, isCurr
   };
 
   return (
-    <div 
+    <div
       className={cn("flex items-center gap-2 group cursor-pointer select-none w-fit", className)}
       onClick={handleCopy}
       title="Click to copy key"
@@ -86,13 +86,13 @@ function KeyDisplay({ keyText, isCurrent, className }: { keyText: string, isCurr
 
 function IconCopyButton({ text, icon: Icon, title, className }: { text: string; icon: any; title: string; className?: string }) {
   const [copied, setCopied] = useState(false);
-  
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-  
+
   return (
     <Button variant="ghost" size="icon" onClick={handleCopy} className={cn("h-8 w-8", className)} title={title}>
       {copied ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Icon className="h-4 w-4" />}
@@ -117,15 +117,15 @@ export default function KeyList() {
         else setLoading(true);
       }
       setError(null);
-      
+
       const [encryptedData, currentIndex, cache] = await Promise.all([
         fetchEncryptedKeys(),
         fetchCurrentIndex(),
         fetchCache(),
       ]);
-      
+
       const decryptedKeys = decryptKeys(encryptedData);
-      
+
       // Auto-refresh if cache is empty and we have keys
       if (autoRefresh && cache.size === 0 && decryptedKeys.length > 0) {
         setRefreshing(true);
@@ -140,14 +140,14 @@ export default function KeyList() {
         setKeys(keyInfos);
         return;
       }
-      
+
       const keyInfos: KeyInfo[] = decryptedKeys.map((key, idx) => ({
         key,
         index: idx + 1,
         isCurrent: idx + 1 === currentIndex,
         usage: cache.get(idx) || null,
       }));
-      
+
       setKeys(keyInfos);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load keys');
@@ -159,7 +159,7 @@ export default function KeyList() {
 
   useEffect(() => {
     loadData();
-    
+
     // Listen for updates from tray menu (Electron only)
     if (isElectron) {
       const unsubscribe = window.oroio.on('keys-updated', () => {
@@ -232,28 +232,47 @@ export default function KeyList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">Access Keys</h1>
-          <p className="text-muted-foreground">
-            Manage your Factory API keys <span className="text-muted-foreground/50">·</span> {keys.length} {keys.length === 1 ? 'key' : 'keys'}
-          </p>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex flex-wrap gap-2 md:gap-4">
+          <div className="px-4 py-2 border border-border bg-card/50 min-w-[140px]">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Total Keys</div>
+            <div className="text-xl font-bold font-mono text-primary">
+              {keys.length.toString().padStart(2, '0')} <span className="text-[10px] text-muted-foreground font-normal">NODES</span>
+            </div>
+          </div>
+
+          <div className="px-4 py-2 border border-border bg-card/50 min-w-[140px]">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Active Index</div>
+            <div className="text-xl font-bold font-mono text-primary">
+              #{keys.find(k => k.isCurrent)?.index || '?'} <span className="text-[10px] text-muted-foreground font-normal">CURRENT</span>
+            </div>
+          </div>
+
+          <div className="px-4 py-2 border border-border bg-card/50 min-w-[180px]">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Global Consumption</div>
+            <div className="text-xl font-bold font-mono text-foreground">
+              {formatNumber(keys.reduce((acc, k) => acc + (k.usage?.used || 0), 0))}
+              <span className="text-muted-foreground mx-1">/</span>
+              {formatNumber(keys.reduce((acc, k) => acc + (k.usage?.total || 0), 0))}
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 ml-auto">
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
+            REFRESH
           </Button>
           <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-2" />
-                Add Key
+                ADD KEY
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add New Key</DialogTitle>
+                <DialogTitle>Inject New Key</DialogTitle>
                 <DialogDescription>Enter your Factory API key below.</DialogDescription>
               </DialogHeader>
               <Input
@@ -263,9 +282,9 @@ export default function KeyList() {
                 onKeyDown={(e) => e.key === 'Enter' && handleAddKey()}
               />
               <DialogFooter>
-                <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => setAddDialogOpen(false)}>CANCEL</Button>
                 <Button onClick={handleAddKey} disabled={adding || !newKey.trim()}>
-                  {adding ? 'Adding...' : 'Add Key'}
+                  {adding ? 'INJECTING...' : 'INJECT KEY'}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -290,21 +309,21 @@ export default function KeyList() {
             {keys.map((info) => {
               const isInvalid = info.usage?.raw?.startsWith('http_') ?? false;
               const percent = info.usage?.total ? Math.round((info.usage.used || 0) / info.usage.total * 100) : 0;
-              
+
               return (
-                <TableRow 
-                  key={info.index} 
-                  className={info.isCurrent 
-                    ? 'bg-green-50/60 hover:bg-green-100/60 dark:bg-green-900/20 dark:hover:bg-green-900/30' 
+                <TableRow
+                  key={info.index}
+                  className={info.isCurrent
+                    ? 'bg-green-50/60 hover:bg-green-100/60 dark:bg-green-900/20 dark:hover:bg-green-900/30'
                     : ''
                   }
                 >
                   <TableCell>
-                    <div 
+                    <div
                       className={cn(
                         "flex items-center justify-center w-8 h-8 rounded-full cursor-pointer transition-colors",
-                        info.isCurrent 
-                          ? "text-green-600 dark:text-green-400" 
+                        info.isCurrent
+                          ? "text-green-600 dark:text-green-400"
                           : "text-muted-foreground/30 hover:text-primary"
                       )}
                       onClick={() => !info.isCurrent && handleUseKey(info.index)}
@@ -321,9 +340,9 @@ export default function KeyList() {
                     {info.index}
                   </TableCell>
                   <TableCell>
-                    <KeyDisplay 
-                      keyText={info.key} 
-                      isCurrent={info.isCurrent} 
+                    <KeyDisplay
+                      keyText={info.key}
+                      isCurrent={info.isCurrent}
                     />
                   </TableCell>
                   <TableCell>
@@ -341,16 +360,16 @@ export default function KeyList() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
-                      <IconCopyButton 
-                        text={`export FACTORY_API_KEY=${info.key}`} 
-                        icon={Terminal} 
-                        title="Copy Export Command" 
+                      <IconCopyButton
+                        text={`export FACTORY_API_KEY=${info.key}`}
+                        icon={Terminal}
+                        title="Copy Export Command"
                       />
-                      
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" 
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         onClick={() => handleRemoveKey(info.index)}
                         title="Delete Key"
                       >
