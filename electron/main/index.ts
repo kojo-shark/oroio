@@ -32,9 +32,10 @@ export function createMainWindow(): BrowserWindow {
     return mainWindow;
   }
 
+  const iconExt = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
   const iconPath = app.isPackaged
-    ? path.join(process.resourcesPath, 'app.asar.unpacked', 'assets', 'icon.png')
-    : path.join(__dirname, '..', '..', 'assets', 'icon.png');
+    ? path.join(process.resourcesPath, 'assets', iconExt)
+    : path.join(__dirname, '..', '..', 'assets', iconExt);
 
   mainWindow = new BrowserWindow({
     width: 960,

@@ -35,7 +35,8 @@
     "appId": "io.oroio.desktop",
     "productName": "oroio",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "assets"
     },
     "files": [
       "dist/**/*",
@@ -56,6 +57,13 @@
       "icon": "../assets/icon.icns",
       "target": [
         "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        "nsis",
         "zip"
       ]
     },
