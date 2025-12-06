@@ -27,7 +27,7 @@ function formatNumber(n: number | null): string {
   if (n === null) return '?';
   if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
   if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
-  if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'k';
+  if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
   return Math.round(n).toString();
 }
 
@@ -72,7 +72,7 @@ function KeyDisplay({ keyText, isCurrent, className }: { keyText: string, isCurr
       onClick={handleCopy}
       title="Click to copy key"
     >
-      <code className={cn("text-sm relative font-mono transition-colors", isCurrent && "font-medium text-cyan-600 dark:text-cyan-400")}>
+      <code className={cn("text-xs relative font-mono transition-colors", isCurrent && "font-medium text-cyan-600 dark:text-cyan-400")}>
         {maskKey(keyText)}
       </code>
       <div className="w-4 h-4 flex items-center justify-center">
@@ -353,10 +353,10 @@ export default function KeyList() {
           <TableHeader>
             <TableRow className="bg-muted/30 hover:bg-muted/30">
               <TableHead className="w-10"></TableHead>
-              <TableHead className="w-12 text-[10px] tracking-wider">#</TableHead>
+              <TableHead className="w-12 text-[10px] tracking-wider">NO</TableHead>
               <TableHead className="text-[10px] tracking-wider">KEY</TableHead>
               <TableHead className="text-[10px] tracking-wider">USAGE</TableHead>
-              <TableHead className="w-20 text-right text-[10px] tracking-wider">%</TableHead>
+              <TableHead className="w-20 text-right text-[10px] tracking-wider">USED%</TableHead>
               <TableHead className="pl-6 text-[10px] tracking-wider">EXPIRY</TableHead>
               <TableHead className="w-[90px] text-right text-[10px] tracking-wider">ACTIONS</TableHead>
             </TableRow>
@@ -392,7 +392,7 @@ export default function KeyList() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium text-sm py-2">
+                  <TableCell className="font-medium text-xs py-2">
                     {info.index}
                   </TableCell>
                   <TableCell className="py-2">
