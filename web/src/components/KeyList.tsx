@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Trash2, Plus, RefreshCw, Terminal, CheckCircle2, Copy, Circle } from 'lucide-react';
+import { Trash2, Plus, RefreshCw, Terminal, CheckCircle2, Copy, Circle, X, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
 import { decryptKeys, maskKey } from '@/utils/crypto';
-import { fetchEncryptedKeys, fetchCurrentIndex, fetchCache, addKey, removeKey, useKey, refreshCache, isElectron } from '@/utils/api';
+import { fetchEncryptedKeys, fetchCurrentIndex, fetchCache, addKey, removeKey, useKey, refreshCache, isElectron, checkDk } from '@/utils/api';
 import type { KeyInfo, KeyUsage } from '@/utils/api';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -98,6 +99,57 @@ function IconCopyButton({ text, icon: Icon, title, className }: { text: string; 
       {copied ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Icon className="h-4 w-4" />}
     </Button>
   );
+}
+
+export function showDkMissingToast(installCmd: string) {
+  const renderId = Date.now();
+  toast.custom((t) => (
+    <div className="flex flex-col w-[320px] bg-card border border-border shadow-xl relative overflow-hidden">
+      <div className="flex gap-4 p-4">
+        <div className="relative shrink-0">
+          <div className="absolute inset-0 bg-amber-500/10 rounded blur-sm" />
+          <div className="relative flex items-center justify-center w-9 h-9 bg-card border border-amber-500/20 text-amber-500 rounded shadow-sm">
+            <AlertTriangle className="w-4 h-4" />
+          </div>
+        </div>
+        <div className="flex-1 min-w-0 pt-0.5">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <p className="text-xs font-bold font-mono text-foreground tracking-wide">DK_NOT_FOUND</p>
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="text-muted-foreground/70 hover:text-foreground transition-colors -mt-1 -mr-1 p-1"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <p className="text-[10px] text-muted-foreground leading-relaxed">
+            Install <code className="font-mono text-amber-500/70">dk</code> to enable key rotation.
+          </p>
+        </div>
+      </div>
+
+      <div className="px-3 pb-3">
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(installCmd);
+            toast.dismiss(t);
+          }}
+          className="flex items-center justify-center w-full gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[10px] font-medium transition-colors hover:text-primary-foreground hover:border-primary/50 group/btn"
+        >
+          <Terminal className="w-3 h-3 group-hover/btn:text-primary" />
+          <span>COPY INSTALL COMMAND</span>
+        </button>
+      </div>
+
+      <div className="h-0.5 bg-muted w-full">
+        <div
+          key={renderId}
+          className="h-full bg-amber-500 animate-shrink-width"
+          onAnimationEnd={() => toast.dismiss(t)}
+        />
+      </div>
+    </div>
+  ), { duration: Infinity, id: 'dk-not-found' });
 }
 
 export default function KeyList() {
@@ -208,6 +260,13 @@ export default function KeyList() {
     const result = await useKey(index);
     if (result.success) {
       await loadData(true);
+      // Check if dk is installed (Electron only)
+      const dkResult = await checkDk();
+      if (dkResult && !dkResult.installed) {
+        if (dkResult && !dkResult.installed) {
+          showDkMissingToast(dkResult.installCmd);
+        }
+      }
     } else {
       alert(result.error || 'Failed to switch key');
     }
@@ -235,16 +294,16 @@ export default function KeyList() {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex flex-wrap gap-2 md:gap-4">
           <div className="px-4 py-2 border border-border bg-card/50 min-w-[140px]">
-            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Total Keys</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Active Index</div>
             <div className="text-xl font-bold font-mono text-primary">
-              {keys.length.toString().padStart(2, '0')} <span className="text-[10px] text-muted-foreground font-normal">NODES</span>
+              #{keys.find(k => k.isCurrent)?.index || '?'} <span className="text-[10px] text-muted-foreground font-normal">CURRENT</span>
             </div>
           </div>
 
           <div className="px-4 py-2 border border-border bg-card/50 min-w-[140px]">
-            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Active Index</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-0.5">Total Keys</div>
             <div className="text-xl font-bold font-mono text-primary">
-              #{keys.find(k => k.isCurrent)?.index || '?'} <span className="text-[10px] text-muted-foreground font-normal">CURRENT</span>
+              {keys.length.toString().padStart(2, '0')} <span className="text-[10px] text-muted-foreground font-normal">NODES</span>
             </div>
           </div>
 
@@ -330,7 +389,7 @@ export default function KeyList() {
                       title={info.isCurrent ? "Currently Active" : "Set as Active"}
                     >
                       {info.isCurrent ? (
-                        <CheckCircle2 className="h-5 w-5 fill-green-500 text-white" />
+                        <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-500" />
                       ) : (
                         <Circle className="h-5 w-5" />
                       )}

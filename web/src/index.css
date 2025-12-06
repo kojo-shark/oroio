@@ -213,4 +213,18 @@
   .border-glow {
     box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
   }
+
+  @keyframes shrink-width {
+    from {
+      width: 100%;
+    }
+
+    to {
+      width: 0%;
+    }
+  }
+
+  .animate-shrink-width {
+    animation: shrink-width 5s linear forwards;
+  }
 }

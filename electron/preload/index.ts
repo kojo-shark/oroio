@@ -26,6 +26,12 @@ export interface McpServer {
   env?: Record<string, string>;
 }
 
+export interface DkCheckResult {
+  installed: boolean;
+  installCmd: string;
+  platform: string;
+}
+
 export interface OroioAPI {
   keys: {
     list: () => Promise<any[]>;
@@ -39,6 +45,8 @@ export interface OroioAPI {
     read: (filename: string) => Promise<ArrayBuffer | null>;
   };
   on: (channel: string, callback: (...args: any[]) => void) => () => void;
+  // dk CLI check
+  checkDk: () => Promise<DkCheckResult>;
   // Skills
   listSkills: () => Promise<Skill[]>;
   createSkill: (name: string) => Promise<void>;
@@ -86,6 +94,8 @@ const api: OroioAPI = {
     ipcRenderer.on(channel, listener);
     return () => ipcRenderer.removeListener(channel, listener);
   },
+  // dk CLI check
+  checkDk: () => ipcRenderer.invoke('dk:check'),
   // Skills
   listSkills: () => ipcRenderer.invoke('skills:list'),
   createSkill: (name: string) => ipcRenderer.invoke('skills:create', name),

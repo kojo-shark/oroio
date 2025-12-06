@@ -2,6 +2,7 @@ import { ipcMain, BrowserWindow, shell } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
+import { exec } from 'child_process';
 import {
   getKeyList,
   getCurrentKey,
@@ -357,6 +358,19 @@ Droid instructions here.
   // Utility handlers
   ipcMain.handle('util:openPath', async (_event, filePath: string): Promise<void> => {
     await shell.openPath(filePath);
+  });
+
+  // dk CLI check
+  ipcMain.handle('dk:check', async (): Promise<{ installed: boolean; installCmd: string; platform: string }> => {
+    const platform = os.platform();
+    const cmd = platform === 'win32' ? 'where dk' : 'which dk';
+    const installed = await new Promise<boolean>((resolve) => {
+      exec(cmd, (error) => resolve(!error));
+    });
+    const installCmd = platform === 'win32'
+      ? 'irm https://raw.githubusercontent.com/notdp/oroio/main/install.ps1 | iex'
+      : 'curl -fsSL https://raw.githubusercontent.com/notdp/oroio/main/install.sh | bash';
+    return { installed, installCmd, platform };
   });
 }
 

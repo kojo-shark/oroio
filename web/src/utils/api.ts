@@ -42,6 +42,12 @@ export interface AuthCheckResult {
   authenticated: boolean;
 }
 
+export interface DkCheckResult {
+  installed: boolean;
+  installCmd: string;
+  platform: string;
+}
+
 export async function checkAuth(): Promise<AuthCheckResult> {
   if (isElectron) {
     return { required: false, authenticated: true };
@@ -399,6 +405,14 @@ export async function updateMcpServer(name: string, config: Omit<McpServer, 'nam
   if (!data.success) throw new Error(data.error);
 }
 
+// dk CLI check (Electron only)
+export async function checkDk(): Promise<DkCheckResult | null> {
+  if (!isElectron) {
+    return null;
+  }
+  return window.oroio.checkDk();
+}
+
 // Type declaration for Electron window
 declare global {
   interface Window {
@@ -415,6 +429,8 @@ declare global {
         read: (filename: string) => Promise<ArrayBuffer | null>;
       };
       on: (channel: string, callback: (...args: unknown[]) => void) => () => void;
+      // dk CLI check
+      checkDk: () => Promise<DkCheckResult>;
       // Skills
       listSkills: () => Promise<Skill[]>;
       createSkill: (name: string) => Promise<void>;

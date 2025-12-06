@@ -67,9 +67,13 @@ export function createMainWindow(): BrowserWindow {
     mainWindow = null;
   });
 
-  if (useDevServer) {
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
-  }
+  mainWindow.webContents.setWindowOpenHandler((details) => {
+    if (details.url.startsWith('http:') || details.url.startsWith('https:')) {
+      require('electron').shell.openExternal(details.url);
+      return { action: 'deny' };
+    }
+    return { action: 'allow' };
+  });
 
   return mainWindow;
 }
@@ -80,26 +84,26 @@ export function getMainWindow(): BrowserWindow | null {
 
 async function initApp() {
   console.log('[oroio] Starting app...');
-  
+
   // Set dock icon on macOS (for dev mode)
   if (process.platform === 'darwin' && !app.isPackaged) {
     const iconPath = path.join(__dirname, '..', '..', 'assets', 'icon.png');
     app.dock.setIcon(iconPath);
   }
-  
+
   registerIpcHandlers();
-  
+
   try {
     console.log('[oroio] Getting key list...');
     const keys = await getKeyList();
     console.log('[oroio] Keys loaded:', keys.length);
-    
+
     console.log('[oroio] Initializing tray...');
     initTray(keys);
     console.log('[oroio] Tray initialized');
-    
+
     initNotifier(keys);
-    
+
     // Auto open main window on start
     createMainWindow();
     console.log('[oroio] App ready');

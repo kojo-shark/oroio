@@ -69,10 +69,13 @@ function encryptKeys(keys: string[]): Buffer {
 }
 
 async function ensureStore(): Promise<void> {
+  await fs.mkdir(OROIO_DIR, { recursive: true });
+  // 如果 keys.enc 不存在，创建空的加密文件
   try {
-    await fs.mkdir(OROIO_DIR, { recursive: true });
+    await fs.access(KEYS_FILE);
   } catch {
-    // ignore
+    const encrypted = encryptKeys([]);
+    await fs.writeFile(KEYS_FILE, encrypted);
   }
 }
 
