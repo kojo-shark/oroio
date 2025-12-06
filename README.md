@@ -113,8 +113,12 @@ dk reinstall
 
 Or manually:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/notdp/oroio/main/reinstall.sh | bash    # macOS/Linux
-irm https://raw.githubusercontent.com/notdp/oroio/main/reinstall.ps1 | iex           # Windows
+# macOS/Linux
+curl -fsSL https://raw.githubusercontent.com/notdp/oroio/main/reinstall.sh | bash
+```
+```powershell
+# Windows
+irm https://raw.githubusercontent.com/notdp/oroio/main/reinstall.ps1 | iex
 ```
 
 ### Uninstalling

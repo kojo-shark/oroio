@@ -113,8 +113,12 @@ dk reinstall
 
 或手动执行：
 ```bash
-curl -fsSL https://raw.githubusercontent.com/notdp/oroio/main/reinstall.sh | bash    # macOS/Linux
-irm https://raw.githubusercontent.com/notdp/oroio/main/reinstall.ps1 | iex           # Windows
+# macOS/Linux
+curl -fsSL https://raw.githubusercontent.com/notdp/oroio/main/reinstall.sh | bash
+```
+```powershell
+# Windows
+irm https://raw.githubusercontent.com/notdp/oroio/main/reinstall.ps1 | iex
 ```
 
 ### 卸载
@@ -125,8 +129,12 @@ dk uninstall
 
 或手动执行：
 ```bash
-curl -fsSL https://raw.githubusercontent.com/notdp/oroio/main/uninstall.sh | bash    # macOS/Linux
-irm https://raw.githubusercontent.com/notdp/oroio/main/uninstall.ps1 | iex           # Windows
+# macOS/Linux
+curl -fsSL https://raw.githubusercontent.com/notdp/oroio/main/uninstall.sh | bash
+```
+```powershell
+# Windows
+irm https://raw.githubusercontent.com/notdp/oroio/main/uninstall.ps1 | iex
 ```
 
 ---
