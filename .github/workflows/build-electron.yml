@@ -74,10 +74,8 @@ jobs:
           name: electron-${{ matrix.platform }}
           path: |
             electron/release/*.dmg
-            electron/release/*.zip
             electron/release/*.exe
             electron/release/*.AppImage
-            electron/release/*.deb
           if-no-files-found: ignore
 
   release:
@@ -112,7 +110,7 @@ jobs:
           body: |
             Pre-built desktop application for macOS, Windows, and Linux.
             
-            **macOS**: Download `.dmg` (recommended) or `.zip` (extract and run directly)
+            **macOS**: Download `.dmg`
             > After installing, run `xattr -cr /Applications/oroio.app` to bypass Gatekeeper (app is unsigned).
             
             **Windows**: Download `.exe` installer

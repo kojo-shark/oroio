@@ -23,14 +23,10 @@ mac:
   gatekeeperAssess: false
   entitlements: entitlements.mac.plist
   entitlementsInherit: entitlements.mac.plist
+  artifactName: ${productName}-${version}-${arch}.${ext}
   target:
     - target: dmg
       arch:
-        - x64
-        - arm64
-    - target: zip
-      arch:
-        - x64
         - arm64
 
 dmg:
@@ -46,16 +42,15 @@ dmg:
 linux:
   target:
     - AppImage
-    - deb
   category: Development
   icon: ../assets/icons
+  artifactName: ${productName}-${version}-x86_64.${ext}
 
 win:
   target:
     - nsis
-    - portable
   icon: assets/icon.ico
-  artifactName: ${productName}-${version}-${arch}.${ext}
+  artifactName: ${productName}-${version}-x86_64.${ext}
 
 nsis:
   oneClick: false
