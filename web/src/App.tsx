@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Key, Sparkles, Terminal, Bot, Plug, Github, Volume2, VolumeX, Sun, Moon } from 'lucide-react';
+import { Key, Sparkles, Terminal, Bot, Plug, Github, Volume2, VolumeX, Sun, Moon, Command } from 'lucide-react';
 import { useSound } from '@/hooks/useSound';
 import { Toaster } from 'sonner';
 import KeyList, { showDkMissingToast } from '@/components/KeyList';
@@ -16,7 +16,7 @@ type Tab = 'keys' | 'commands' | 'skills' | 'droids' | 'mcp';
 
 const tabs: { id: Tab; label: string; icon: typeof Key }[] = [
   { id: 'keys', label: 'KEYS', icon: Key },
-  { id: 'commands', label: 'COMMANDS', icon: Terminal },
+  { id: 'commands', label: 'COMMANDS', icon: Command },
   { id: 'skills', label: 'SKILLS', icon: Sparkles },
   { id: 'droids', label: 'DROIDS', icon: Bot },
   { id: 'mcp', label: 'MCP', icon: Plug },
@@ -137,6 +137,7 @@ export default function App() {
                 <span className="font-pixel text-lg tracking-tighter mt-0.5 text-primary leading-none">OROIO</span>
               </h1>
 
+
             </div>
 
             <div className="flex items-center gap-3 text-xs">
@@ -177,8 +178,8 @@ export default function App() {
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{label}</span>
+                  <Icon className="w-3.5 h-3.5 -translate-y-px" />
+                  <span className="leading-none">{label}</span>
                 </button>
               );
             })}
