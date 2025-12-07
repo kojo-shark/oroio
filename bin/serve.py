@@ -12,7 +12,7 @@ import sys
 import threading
 import urllib.request
 import urllib.error
-from urllib.parse import unquote
+from urllib.parse import unquote, urlsplit, urlunsplit
 
 SALT = b"oroio"
 VALID_TOKENS = set()  # In-memory token storage
@@ -231,6 +231,47 @@ class OroioHandler(http.server.SimpleHTTPRequestHandler):
         if path.startswith('/data/'):
             self.serve_oroio_file(path[6:])
         else:
+            self.serve_static_with_etag(path)
+    
+    def serve_static_with_etag(self, path):
+        """Serve static files with ETag support"""
+        filepath = self.translate_path(self.path)
+        if os.path.isdir(filepath):
+            # 与 SimpleHTTPRequestHandler 保持一致：目录请求缺少尾斜杠时先 301，确保后续相对资源以目录为基准解析
+            parsed = urlsplit(self.path)
+            if not parsed.path.endswith('/'):
+                new_path = parsed._replace(path=parsed.path + '/')
+                self.send_response(301)
+                self.send_header('Location', urlunsplit(new_path))
+                self.end_headers()
+                return
+            filepath = os.path.join(filepath, 'index.html')
+        if not os.path.isfile(filepath):
+            super().do_GET()
+            return
+        
+        try:
+            stat = os.stat(filepath)
+            etag = f'"{stat.st_size}-{int(stat.st_mtime)}"'
+            
+            if_none_match = self.headers.get('If-None-Match')
+            if if_none_match == etag:
+                self.send_response(304)
+                self.send_header('ETag', etag)
+                self.end_headers()
+                return
+            
+            with open(filepath, 'rb') as f:
+                content = f.read()
+            
+            self.send_response(200)
+            self.send_header('Content-Type', self.guess_type(filepath))
+            self.send_header('Content-Length', len(content))
+            self.send_header('ETag', etag)
+            self.send_header('Cache-Control', 'no-cache')
+            self.end_headers()
+            self.wfile.write(content)
+        except Exception:
             super().do_GET()
     
     def do_POST(self):
