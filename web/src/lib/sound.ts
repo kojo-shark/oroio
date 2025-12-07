@@ -59,40 +59,40 @@ export const playSound = (sound: SoundType) => {
 
   switch (sound) {
     case 'click':
-      playTone(600, 0.03, 'triangle', 0.035, 0.002);
+      playTone(600, 0.03, 'triangle', 0.175, 0.002);
       break;
 
     case 'hover':
-      playTone(1800, 0.02, 'sine', 0.02, 0.001);
+      playTone(1800, 0.02, 'sine', 0.1, 0.001);
       break;
 
     case 'success':
       // Subtle high ping
-      playTone(1400, 0.08, 'sine', 0.03, 0.002);
+      playTone(1400, 0.08, 'sine', 0.15, 0.002);
       break;
 
     case 'error':
       // Two quick low taps
-      playTone(300, 0.05, 'sine', 0.04, 0.002);
+      playTone(300, 0.05, 'sine', 0.2, 0.002);
       break;
 
     case 'delete':
       // Soft whoosh down
-      playTone(600, 0.06, 'sine', 0.025, 0.001);
+      playTone(600, 0.06, 'sine', 0.125, 0.001);
       break;
 
     case 'toggle':
-      playTone(880, 0.05, 'sine', 0.03, 0.002);
+      playTone(880, 0.05, 'sine', 0.15, 0.002);
       break;
 
     case 'switch':
       // Retro terminal blip for key switch
-      playTone(440, 0.015, 'square', 0.025, 0.001);
-      setTimeout(() => playTone(880, 0.04, 'square', 0.02, 0.001), 20);
+      playTone(440, 0.015, 'square', 0.125, 0.001);
+      setTimeout(() => playTone(880, 0.04, 'square', 0.1, 0.001), 20);
       break;
 
     case 'notify':
-      playTone(1000, 0.1, 'sine', 0.03, 0.003);
+      playTone(1000, 0.1, 'sine', 0.15, 0.003);
       break;
   }
 };
