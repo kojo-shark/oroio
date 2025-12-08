@@ -32,9 +32,9 @@ export default function App() {
     }
     return 'light';
   });
-  const [navStyle, setNavStyle] = useState<'sidebar' | 'classic'>(() => {
+  const [navStyle, setNavStyle] = useState<'sidebar' | 'top'>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem('oroio-nav-style') as 'sidebar' | 'classic') || 'sidebar';
+      return (localStorage.getItem('oroio-nav-style') as 'sidebar' | 'top') || 'sidebar';
     }
     return 'sidebar';
   });
@@ -243,10 +243,10 @@ export default function App() {
       >
         <VscDropdown
           value={navStyle}
-          onChange={(v) => setNavStyle(v as 'sidebar' | 'classic')}
+          onChange={(v) => setNavStyle(v as 'sidebar' | 'top')}
           options={[
             { value: 'sidebar', label: 'sidebar', isDefault: true },
-            { value: 'classic', label: 'top' },
+            { value: 'top', label: 'top' },
           ]}
         />
       </SettingItem>
@@ -297,8 +297,8 @@ export default function App() {
     </nav>
   );
 
-  // Classic navigation (horizontal tabs)
-  const classicNav = (
+  // Top navigation (horizontal tabs)
+  const topNav = (
     <nav className="flex items-center justify-between w-full">
       <div className="flex items-center gap-0.5 text-sm border border-border bg-card p-1">
         {tabs.map(({ id, label, icon: Icon }) => {
@@ -401,10 +401,10 @@ export default function App() {
             </span>
             
             <button
-              onClick={() => { sound.click(); setNavStyle(navStyle === 'sidebar' ? 'classic' : 'sidebar'); }}
+              onClick={() => { sound.click(); setNavStyle('top'); }}
               className="hover:opacity-80 cursor-pointer"
             >
-              Nav: {navStyle === 'sidebar' ? 'Side' : 'Top'}
+              Nav: Side
             </button>
           </span>
           <a href="https://github.com/notdp/oroio" target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
@@ -459,7 +459,7 @@ export default function App() {
             </div>
           </div>
         </header>
-        <div className="mt-8 shrink-0">{classicNav}</div>
+        <div className="mt-8 shrink-0">{topNav}</div>
         <main className="border border-border bg-card p-6 flex-1 relative overflow-auto mt-8">
           {showSettings ? settingsContent : (
             <>
@@ -495,10 +495,10 @@ export default function App() {
           </span>
           
           <button
-            onClick={() => { sound.click(); setNavStyle(navStyle === 'sidebar' ? 'classic' : 'sidebar'); }}
+            onClick={() => { sound.click(); setNavStyle('sidebar'); }}
             className="hover:opacity-80 cursor-pointer"
           >
-            Nav: {navStyle === 'sidebar' ? 'Side' : 'Top'}
+            Nav: Top
           </button>
         </span>
         <a href="https://github.com/notdp/oroio" target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
