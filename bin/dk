@@ -16,6 +16,24 @@ DKM_LIST_AUTO_MAX="${DKM_LIST_AUTO_MAX:-6}"        # 自动模式的最大并发
 DKM_LIST_JOBS="${DKM_LIST_JOBS:-0}"                # 0 表示自动 min(DKM_LIST_AUTO_MAX, key数)
 DKM_CACHE_TTL="${DKM_CACHE_TTL:-30}"                # list 结果缓存 TTL（秒，0 关闭）
 
+use_ascii_borders() {
+  # locale 中未包含 UTF-8 时退回 ASCII；亦可通过 DKM_ASCII=1 强制 ASCII
+  if [[ "${DKM_ASCII:-}" == "1" ]]; then return 0; fi
+  local lc="${LC_ALL:-${LC_CTYPE:-${LANG:-}}}"
+  [[ "$lc" =~ [Uu][Tt][Ff]-?8 ]] && return 1
+  return 0
+}
+
+if use_ascii_borders; then
+  B_TL='+'; B_TR='+'; B_BL='+'; B_BR='+'
+  B_H='-'; B_V='|'
+  B_TT='+'; B_TB='+'; B_TL_MID='+'; B_TR_MID='+'; B_X='+'
+else
+  B_TL='┌'; B_TR='┐'; B_BL='└'; B_BR='┘'
+  B_H='─'; B_V='│'
+  B_TT='┬'; B_TB='┴'; B_TL_MID='├'; B_TR_MID='┤'; B_X='┼'
+fi
+
 usage() {
   cat <<'EOF'
 Usage: dk <command> [args]
@@ -808,28 +826,48 @@ cmd_list() {
   h3=$(color_black_bold "Usage")
   h4=$(color_black_bold "Expiry")
   local top mid bot
-  top=$(printf "┌%s┬%s┬%s┬%s┐" \
-    "$(printf '%*s' $((4+2)) '' | tr ' ' '─')" \
-    "$(printf '%*s' $((keyw+2)) '' | tr ' ' '─')" \
-    "$(printf '%*s' $((progw+2)) '' | tr ' ' '─')" \
-    "$(printf '%*s' $((expw+2)) '' | tr ' ' '─')")
-  mid=$(printf "├%s┼%s┼%s┼%s┤" \
-    "$(printf '%*s' $((4+2)) '' | tr ' ' '─')" \
-    "$(printf '%*s' $((keyw+2)) '' | tr ' ' '─')" \
-    "$(printf '%*s' $((progw+2)) '' | tr ' ' '─')" \
-    "$(printf '%*s' $((expw+2)) '' | tr ' ' '─')")
-  bot=$(printf "└%s┴%s┴%s┴%s┘" \
-    "$(printf '%*s' $((4+2)) '' | tr ' ' '─')" \
-    "$(printf '%*s' $((keyw+2)) '' | tr ' ' '─')" \
-    "$(printf '%*s' $((progw+2)) '' | tr ' ' '─')" \
-    "$(printf '%*s' $((expw+2)) '' | tr ' ' '─')")
+  top=$(printf "%s%s%s%s%s%s%s%s%s" \
+    "$B_TL" \
+    "$(printf '%*s' $((4+2)) '' | tr ' ' "$B_H")" \
+    "$B_TT" \
+    "$(printf '%*s' $((keyw+2)) '' | tr ' ' "$B_H")" \
+    "$B_TT" \
+    "$(printf '%*s' $((progw+2)) '' | tr ' ' "$B_H")" \
+    "$B_TT" \
+    "$(printf '%*s' $((expw+2)) '' | tr ' ' "$B_H")" \
+    "$B_TR")
+  mid=$(printf "%s%s%s%s%s%s%s%s%s" \
+    "$B_TL_MID" \
+    "$(printf '%*s' $((4+2)) '' | tr ' ' "$B_H")" \
+    "$B_X" \
+    "$(printf '%*s' $((keyw+2)) '' | tr ' ' "$B_H")" \
+    "$B_X" \
+    "$(printf '%*s' $((progw+2)) '' | tr ' ' "$B_H")" \
+    "$B_X" \
+    "$(printf '%*s' $((expw+2)) '' | tr ' ' "$B_H")" \
+    "$B_TR_MID")
+  bot=$(printf "%s%s%s%s%s%s%s%s%s" \
+    "$B_BL" \
+    "$(printf '%*s' $((4+2)) '' | tr ' ' "$B_H")" \
+    "$B_TB" \
+    "$(printf '%*s' $((keyw+2)) '' | tr ' ' "$B_H")" \
+    "$B_TB" \
+    "$(printf '%*s' $((progw+2)) '' | tr ' ' "$B_H")" \
+    "$B_TB" \
+    "$(printf '%*s' $((expw+2)) '' | tr ' ' "$B_H")" \
+    "$B_BR")
 
   printf "%s\n" "$top"
-  printf "│ %s │ %s │ %s │ %s │\n" \
+  printf "%s %s %s %s %s %s %s %s %s\n" \
+    "$B_V" \
     "$(pad_cell "$h1" 4)" \
+    "$B_V" \
     "$(pad_cell "$h2" $keyw)" \
+    "$B_V" \
     "$(pad_cell "$h3" $progw)" \
-    "$(pad_cell "$h4" $expw)"
+    "$B_V" \
+    "$(pad_cell "$h4" $expw)" \
+    "$B_V"
   printf "%s\n" "$mid"
 
   local idx=0
@@ -838,11 +876,16 @@ cmd_list() {
     key_cell=$(clip_pad "${ROW_KEY[$idx]}" "$keyw")
     usage_cell=$(clip_pad "${ROW_USAGE[$idx]}" "$progw")
     exp_cell=$(clip_pad "${ROW_EXP[$idx]}" $expw)
-    printf "│ %s │ %s │ %s │ %s │\n" \
+    printf "%s %s %s %s %s %s %s %s %s\n" \
+      "$B_V" \
       "$(pad_cell "${ROW_NO[$idx]}" 4)" \
+      "$B_V" \
       "$key_cell" \
+      "$B_V" \
       "$usage_cell" \
-      "$exp_cell"
+      "$B_V" \
+      "$exp_cell" \
+      "$B_V"
     ((++idx))
   done
   printf "%s\n" "$bot"
@@ -919,14 +962,14 @@ cmd_current() {
     alert=1
   fi
 
-  local border_char top_left top_right vert horiz
-  border_char="─"
-  top_left="┌"; top_right="┐"; vert="│"; horiz="─"
+  local top_left top_right vert horiz t_joint b_joint bottom_left bottom_right
+  top_left="$B_TL"; top_right="$B_TR"; bottom_left="$B_BL"; bottom_right="$B_BR"
+  vert="$B_V"; horiz="$B_H"; t_joint="$B_TT"; b_joint="$B_TB"
   local border
   border=$(printf "%s%s%s%s%s" \
     "$top_left" \
     "$(printf '%*s' $((label_w+2)) '' | tr ' ' "$horiz")" \
-    "┬" \
+    "$t_joint" \
     "$(printf '%*s' $((value_w+2)) '' | tr ' ' "$horiz")" \
     "$top_right")
 
@@ -936,13 +979,16 @@ cmd_current() {
   fi
 
   printf "%s\n" "$border"
-  printf "│ %-*s │ %-*s │\n" "$label_w" "No"    "$value_w" "$cur"
-  printf "│ %-*s │ %-*s │\n" "$label_w" "Key"   "$value_w" "$key_display"
-  printf "│ %-*s │ %-*s │\n" "$label_w" "Usage" "$value_w" "$bar $usage_text"
-  printf "│ %-*s │ %-*s │\n" "$label_w" "Expiry" "$value_w" "$exp_display"
-  printf "└%s┴%s┘\n" \
+  printf "%s %-*s %s %-*s %s\n" "$vert" "$label_w" "No"    "$vert" "$value_w" "$cur"          "$vert"
+  printf "%s %-*s %s %-*s %s\n" "$vert" "$label_w" "Key"   "$vert" "$value_w" "$key_display" "$vert"
+  printf "%s %-*s %s %-*s %s\n" "$vert" "$label_w" "Usage" "$vert" "$value_w" "$bar $usage_text" "$vert"
+  printf "%s %-*s %s %-*s %s\n" "$vert" "$label_w" "Expiry" "$vert" "$value_w" "$exp_display" "$vert"
+  printf "%s%s%s%s%s\n" \
+    "$bottom_left" \
     "$(printf '%*s' $((label_w+2)) '' | tr ' ' "$horiz")" \
-    "$(printf '%*s' $((value_w+2)) '' | tr ' ' "$horiz")"
+    "$b_joint" \
+    "$(printf '%*s' $((value_w+2)) '' | tr ' ' "$horiz")" \
+    "$bottom_right"
 
   echo
   local export_line="export FACTORY_API_KEY=${key}"
