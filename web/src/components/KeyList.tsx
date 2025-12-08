@@ -4,11 +4,10 @@ import { toast } from 'sonner';
 import { sounds } from '@/lib/sound';
 import { decryptKeys, maskKey } from '@/utils/crypto';
 import { fetchEncryptedKeys, fetchCurrentIndex, fetchCache, addKey, removeKey, useKey, refreshCache, isElectron, checkDk } from '@/utils/api';
-import type { KeyInfo, KeyUsage } from '@/utils/api';
+import type { KeyInfo } from '@/utils/api';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,30 +30,7 @@ function formatNumber(n: number | null): string {
   return Math.round(n).toString();
 }
 
-function UsageCell({ usage }: { usage: KeyUsage | null }) {
-  if (!usage || usage.total === null) {
-    return <span className="text-muted-foreground text-xs">-</span>;
-  }
 
-  const used = usage.used ?? 0;
-  const total = usage.total;
-  const isLow = usage.balance != null && total > 0 && usage.balance / total <= 0.1;
-  const isZero = usage.balance != null && usage.balance <= 0;
-
-  return (
-    <div className="flex flex-col gap-1 min-w-[140px]">
-      <div className="flex items-center justify-between text-xs text-muted-foreground tracking-wider">
-        <span>{formatNumber(used)} / {formatNumber(total)}</span>
-      </div>
-      <Progress
-        value={used}
-        max={total}
-        className="w-full h-1.5"
-        indicatorClassName={isZero ? 'bg-destructive' : isLow ? 'bg-amber-500' : 'bg-emerald-500'}
-      />
-    </div>
-  );
-}
 
 function KeyDisplay({ keyText, isCurrent, className }: { keyText: string, isCurrent: boolean, className?: string }) {
   const [copied, setCopied] = useState(false);
@@ -330,7 +306,7 @@ export default function KeyList() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="px-3 py-1.5 border border-border bg-card flex items-center gap-2">
@@ -404,26 +380,31 @@ export default function KeyList() {
           <TableHeader>
             <TableRow className="bg-muted/30 hover:bg-muted/30">
               <TableHead className="w-10"></TableHead>
-              <TableHead className="w-12 text-xs tracking-wider">NO</TableHead>
+              <TableHead className="text-xs tracking-wider">NO</TableHead>
               <TableHead className="text-xs tracking-wider">KEY</TableHead>
-              <TableHead className="text-xs tracking-wider">USAGE</TableHead>
-              <TableHead className="w-20 text-right text-xs tracking-wider">USED</TableHead>
-              <TableHead className="pl-6 text-xs tracking-wider">EXPIRY</TableHead>
-              <TableHead className="w-[90px] text-right text-xs tracking-wider">ACTIONS</TableHead>
+              <TableHead className="text-right text-xs tracking-wider">%</TableHead>
+              <TableHead className="text-xs tracking-wider text-right">QUOTA</TableHead>
+              <TableHead className="text-xs tracking-wider">EXPIRY</TableHead>
+              <TableHead className="text-right text-xs tracking-wider">ACTIONS</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {keys.map((info) => {
               const isInvalid = info.usage?.raw?.startsWith('http_') ?? false;
               const percent = info.usage?.total ? Math.round((info.usage.used || 0) / info.usage.total * 100) : 0;
+              const isLow = info.usage?.balance != null && info.usage.total && info.usage.total > 0 && info.usage.balance / info.usage.total <= 0.1;
+              const isZero = info.usage?.balance != null && info.usage.balance <= 0;
+              const progressColor = isZero ? 'rgb(239 68 68 / 0.15)' : isLow ? 'rgb(245 158 11 / 0.15)' : 'rgb(16 185 129 / 0.15)';
 
               return (
                 <TableRow
                   key={info.index}
-                  className={cn(
-                    "transition-colors",
-                    info.isCurrent && "bg-primary/5 hover:bg-primary/10"
-                  )}
+                  className="transition-colors"
+                  style={{
+                    background: info.usage?.total
+                      ? `linear-gradient(to right, ${progressColor} ${percent}%, transparent ${percent}%)`
+                      : undefined
+                  }}
                 >
                   <TableCell className="py-2">
                     <div
@@ -452,20 +433,26 @@ export default function KeyList() {
                       isCurrent={info.isCurrent}
                     />
                   </TableCell>
-                  <TableCell className="py-2">
-                    <UsageCell usage={info.usage} />
-                  </TableCell>
                   <TableCell className="text-right font-mono text-sm text-muted-foreground py-2">
                     {info.usage?.total ? `${percent}%` : '-'}
                   </TableCell>
-                  <TableCell className="pl-6 py-2">
+                  <TableCell className="py-2 text-sm text-muted-foreground font-mono text-right whitespace-nowrap">
+                    {info.usage?.total ? (
+                      <span>
+                        {formatNumber(info.usage.used || 0)}
+                        <span className="text-muted-foreground/50 mx-0.5">/</span>
+                        {formatNumber(info.usage.total)}
+                      </span>
+                    ) : '-'}
+                  </TableCell>
+                  <TableCell className="py-2 whitespace-nowrap">
                     {isInvalid ? (
                       <Badge variant="destructive" className="text-xs">INVALID</Badge>
                     ) : (
                       <span className="text-sm text-muted-foreground">{info.usage?.expires || '-'}</span>
                     )}
                   </TableCell>
-                  <TableCell className="py-2">
+                  <TableCell className="py-2 whitespace-nowrap">
                     <div className="flex items-center justify-end gap-0.5">
                       <IconCopyButton
                         text={`export FACTORY_API_KEY=${info.key}`}
