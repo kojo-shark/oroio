@@ -55,17 +55,46 @@
     "mac": {
       "category": "public.app-category.developer-tools",
       "icon": "../assets/icon.icns",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
       ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Development",
+      "icon": "../assets/icons",
+      "artifactName": "${productName}-${version}-x64.${ext}"
     },
     "win": {
       "icon": "assets/icon.ico",
+      "artifactName": "${productName}-${version}-x64.${ext}",
       "target": [
-        "nsis",
-        "zip"
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-${version}-x64.${ext}"
     },
     "dmg": {
       "contents": [
