@@ -617,7 +617,7 @@ export default function KeyList() {
                     />
                   </TableCell>
                   <TableCell className="py-2">
-                    <NoteCell keyText={info.key} onUpdate={() => setNotesVersion(v => v + 1)} />
+                    <NoteCell key={info.key} keyText={info.key} onUpdate={() => setNotesVersion(v => v + 1)} />
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm text-muted-foreground py-2">
                     {info.usage?.total ? `${percent}%` : '-'}
