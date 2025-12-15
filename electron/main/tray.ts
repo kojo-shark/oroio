@@ -22,8 +22,10 @@ function getTrayIcon(): NativeImage {
 }
 
 function getProgressBar(percent: number, width: number = 10): string {
-  const filled = Math.round((percent / 100) * width);
-  const empty = width - filled;
+  const barWidth = Number.isFinite(width) && width > 0 ? Math.floor(width) : 10;
+  const safePercent = Number.isFinite(percent) ? percent : 0;
+  const filled = Math.max(0, Math.min(barWidth, Math.round((safePercent / 100) * barWidth)));
+  const empty = barWidth - filled;
   return '■'.repeat(filled) + '□'.repeat(empty);
 }
 
