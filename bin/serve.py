@@ -118,43 +118,58 @@ def encrypt_keys(keys: list, keys_file: str):
         )
 
 API_URL = 'https://app.factory.ai/api/organization/members/chat-usage'
-API_TIMEOUT = 4
+API_TIMEOUT = 8
+API_RETRIES = 3
 FACTORY_DIR = os.path.join(os.path.expanduser('~'), '.factory')
 
 def fetch_usage(key: str) -> dict:
-    """获取单个 key 的用量信息"""
+    """获取单个 key 的用量信息，带重试机制"""
+    import time
     result = {'BALANCE': 0, 'BALANCE_NUM': 0, 'TOTAL': 0, 'USED': 0, 'EXPIRES': '?', 'RAW': ''}
-    try:
-        req = urllib.request.Request(API_URL, headers={
-            'Authorization': f'Bearer {key}',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        })
-        with urllib.request.urlopen(req, timeout=API_TIMEOUT) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
-        usage = data.get('usage')
-        if not usage:
-            result['RAW'] = 'no_usage'
+    last_error = None
+    
+    for attempt in range(API_RETRIES):
+        try:
+            req = urllib.request.Request(API_URL, headers={
+                'Authorization': f'Bearer {key}',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            })
+            with urllib.request.urlopen(req, timeout=API_TIMEOUT) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+            usage = data.get('usage')
+            if not usage:
+                result['RAW'] = 'no_usage'
+                return result
+            section = usage.get('standard') or usage.get('premium') or usage.get('total') or usage.get('main')
+            if section:
+                total = section.get('totalAllowance') or section.get('basicAllowance') or section.get('allowance')
+                used = section.get('orgTotalTokensUsed') or section.get('used') or section.get('tokensUsed') or 0
+                used += section.get('orgOverageUsed') or 0
+                if total is not None:
+                    result['TOTAL'] = int(total)
+                    result['USED'] = int(used)
+                    result['BALANCE_NUM'] = int(total - used)
+                    result['BALANCE'] = result['BALANCE_NUM']
+            exp_raw = usage.get('endDate') or usage.get('expire_at') or usage.get('expires_at')
+            if exp_raw is not None:
+                if isinstance(exp_raw, (int, float)) or (isinstance(exp_raw, str) and exp_raw.isdigit()):
+                    from datetime import datetime
+                    result['EXPIRES'] = datetime.utcfromtimestamp(int(exp_raw) / 1000).strftime('%Y-%m-%d')
+                else:
+                    result['EXPIRES'] = str(exp_raw)
             return result
-        section = usage.get('standard') or usage.get('premium') or usage.get('total') or usage.get('main')
-        if section:
-            total = section.get('totalAllowance') or section.get('basicAllowance') or section.get('allowance')
-            used = section.get('orgTotalTokensUsed') or section.get('used') or section.get('tokensUsed') or 0
-            used += section.get('orgOverageUsed') or 0
-            if total is not None:
-                result['TOTAL'] = int(total)
-                result['USED'] = int(used)
-                result['BALANCE_NUM'] = int(total - used)
-                result['BALANCE'] = result['BALANCE_NUM']
-        exp_raw = usage.get('endDate') or usage.get('expire_at') or usage.get('expires_at')
-        if exp_raw is not None:
-            if isinstance(exp_raw, (int, float)) or (isinstance(exp_raw, str) and exp_raw.isdigit()):
-                from datetime import datetime
-                result['EXPIRES'] = datetime.utcfromtimestamp(int(exp_raw) / 1000).strftime('%Y-%m-%d')
-            else:
-                result['EXPIRES'] = str(exp_raw)
-    except Exception:
-        result['RAW'] = 'http_error'
-        result['EXPIRES'] = 'Invalid key'
+        except urllib.error.HTTPError as e:
+            result['RAW'] = f'http_{e.code}'
+            result['EXPIRES'] = 'Invalid key'
+            return result
+        except Exception as e:
+            last_error = e
+            if attempt < API_RETRIES - 1:
+                time.sleep(0.5)
+                continue
+    
+    result['RAW'] = 'http_error'
+    result['EXPIRES'] = 'Invalid key'
     return result
 
 def fetch_all_usages(keys: list) -> list:

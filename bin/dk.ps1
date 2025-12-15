@@ -27,7 +27,8 @@ $script:DK_PATH = if ($PSCommandPath) { $PSCommandPath } elseif ($MyInvocation.M
 $script:DK_DIR = if ($script:DK_PATH) { Split-Path $script:DK_PATH -Parent } else { $null }
 $script:SALT = "oroio"
 $script:CACHE_TTL = 30
-$script:CURL_TIMEOUT = 4
+$script:CURL_TIMEOUT = 8
+$script:CURL_RETRIES = 3
 $script:LIST_MAX_JOBS = 6
 
 function Show-Usage {
@@ -388,78 +389,93 @@ function Fetch-Usage {
         RAW = ""
     }
     
-    try {
-        $headers = @{
-            "Authorization" = "Bearer $Key"
-            "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-        
-        $response = Invoke-RestMethod -Uri "https://app.factory.ai/api/organization/members/chat-usage" `
-            -Headers $headers -Method Get -TimeoutSec $script:CURL_TIMEOUT -ErrorAction Stop
-        
-        $usage = $response.usage
-        if ($null -eq $usage) {
-            $result.RAW = "no_usage"
-            return $result
-        }
-        
-        $section = $null
-        foreach ($s in @($usage.standard, $usage.premium, $usage.total, $usage.main)) {
-            if ($null -ne $s) {
-                $section = $s
-                break
+    $headers = @{
+        "Authorization" = "Bearer $Key"
+        "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    
+    for ($attempt = 1; $attempt -le $script:CURL_RETRIES; $attempt++) {
+        try {
+            $response = Invoke-RestMethod -Uri "https://app.factory.ai/api/organization/members/chat-usage" `
+                -Headers $headers -Method Get -TimeoutSec $script:CURL_TIMEOUT -ErrorAction Stop
+            
+            $usage = $response.usage
+            if ($null -eq $usage) {
+                $result.RAW = "no_usage"
+                return $result
             }
-        }
-        
-        if ($null -ne $section) {
-            $total = $section.totalAllowance
-            if ($null -eq $total) { $total = $section.basicAllowance }
-            if ($null -eq $total) { $total = $section.allowance }
             
-            $used = $section.orgTotalTokensUsed
-            if ($null -eq $used) { $used = $section.used }
-            if ($null -eq $used) { $used = $section.tokensUsed }
-            if ($null -eq $used) { $used = 0 }
-            
-            $overage = $section.orgOverageUsed
-            if ($null -eq $overage) { $overage = 0 }
-            $used = $used + $overage
-            
-            if ($null -ne $total) {
-                $result.TOTAL = [long]$total
-                $result.USED = [long]$used
-                $result.BALANCE_NUM = [long]($total - $used)
-                $result.BALANCE = $result.BALANCE_NUM
-            }
-        }
-        
-        $expRaw = $usage.endDate
-        if ($null -eq $expRaw) { $expRaw = $usage.expire_at }
-        if ($null -eq $expRaw) { $expRaw = $usage.expires_at }
-        
-        if ($null -ne $expRaw) {
-            try {
-                if ($expRaw -match '^\d+$') {
-                    $ts = [long]$expRaw / 1000
-                    $date = [DateTimeOffset]::FromUnixTimeSeconds([long]$ts)
-                    $result.EXPIRES = $date.ToString("yyyy-MM-dd")
+            $section = $null
+            foreach ($s in @($usage.standard, $usage.premium, $usage.total, $usage.main)) {
+                if ($null -ne $s) {
+                    $section = $s
+                    break
                 }
-                else {
+            }
+            
+            if ($null -ne $section) {
+                $total = $section.totalAllowance
+                if ($null -eq $total) { $total = $section.basicAllowance }
+                if ($null -eq $total) { $total = $section.allowance }
+                
+                $used = $section.orgTotalTokensUsed
+                if ($null -eq $used) { $used = $section.used }
+                if ($null -eq $used) { $used = $section.tokensUsed }
+                if ($null -eq $used) { $used = 0 }
+                
+                $overage = $section.orgOverageUsed
+                if ($null -eq $overage) { $overage = 0 }
+                $used = $used + $overage
+                
+                if ($null -ne $total) {
+                    $result.TOTAL = [long]$total
+                    $result.USED = [long]$used
+                    $result.BALANCE_NUM = [long]($total - $used)
+                    $result.BALANCE = $result.BALANCE_NUM
+                }
+            }
+            
+            $expRaw = $usage.endDate
+            if ($null -eq $expRaw) { $expRaw = $usage.expire_at }
+            if ($null -eq $expRaw) { $expRaw = $usage.expires_at }
+            
+            if ($null -ne $expRaw) {
+                try {
+                    if ($expRaw -match '^\d+$') {
+                        $ts = [long]$expRaw / 1000
+                        $date = [DateTimeOffset]::FromUnixTimeSeconds([long]$ts)
+                        $result.EXPIRES = $date.ToString("yyyy-MM-dd")
+                    }
+                    else {
+                        $result.EXPIRES = $expRaw.ToString()
+                    }
+                }
+                catch {
                     $result.EXPIRES = $expRaw.ToString()
                 }
             }
-            catch {
-                $result.EXPIRES = $expRaw.ToString()
+            return $result
+        }
+        catch [System.Net.WebException] {
+            $statusCode = [int]$_.Exception.Response.StatusCode
+            if ($statusCode -ge 400 -and $statusCode -lt 500) {
+                $result.RAW = "http_$statusCode"
+                $result.EXPIRES = "Invalid key"
+                return $result
+            }
+            if ($attempt -lt $script:CURL_RETRIES) {
+                Start-Sleep -Milliseconds 500
+            }
+        }
+        catch {
+            if ($attempt -lt $script:CURL_RETRIES) {
+                Start-Sleep -Milliseconds 500
             }
         }
     }
-    catch {
-        $result.BALANCE = 0
-        $result.BALANCE_NUM = 0
-        $result.RAW = "http_error"
-        $result.EXPIRES = "Invalid key"
-    }
     
+    $result.RAW = "http_error"
+    $result.EXPIRES = "Invalid key"
     return $result
 }
 
@@ -546,61 +562,73 @@ function Fetch-UsageParallel {
     param([string[]]$Keys)
     
     $timeout = $script:CURL_TIMEOUT
+    $retries = $script:CURL_RETRIES
     $maxJobs = $script:LIST_MAX_JOBS
     if ($maxJobs -lt 1) { $maxJobs = 6 }
     if ($Keys.Length -lt $maxJobs) { $maxJobs = $Keys.Length }
     
     $scriptBlock = {
-        param([string]$Key, [int]$Timeout)
+        param([string]$Key, [int]$Timeout, [int]$Retries)
         $result = @{
             BALANCE = 0; BALANCE_NUM = 0; TOTAL = 0; USED = 0; EXPIRES = "?"; RAW = ""
         }
-        try {
-            $headers = @{
-                "Authorization" = "Bearer $Key"
-                "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            }
-            $response = Invoke-RestMethod -Uri "https://app.factory.ai/api/organization/members/chat-usage" `
-                -Headers $headers -Method Get -TimeoutSec $Timeout -ErrorAction Stop
-            $usage = $response.usage
-            if ($null -eq $usage) { $result.RAW = "no_usage"; return $result }
-            $section = $null
-            foreach ($s in @($usage.standard, $usage.premium, $usage.total, $usage.main)) {
-                if ($null -ne $s) { $section = $s; break }
-            }
-            if ($null -ne $section) {
-                $total = $section.totalAllowance
-                if ($null -eq $total) { $total = $section.basicAllowance }
-                if ($null -eq $total) { $total = $section.allowance }
-                $used = $section.orgTotalTokensUsed
-                if ($null -eq $used) { $used = $section.used }
-                if ($null -eq $used) { $used = $section.tokensUsed }
-                if ($null -eq $used) { $used = 0 }
-                $overage = $section.orgOverageUsed
-                if ($null -eq $overage) { $overage = 0 }
-                $used = $used + $overage
-                if ($null -ne $total) {
-                    $result.TOTAL = [long]$total
-                    $result.USED = [long]$used
-                    $result.BALANCE_NUM = [long]($total - $used)
-                    $result.BALANCE = $result.BALANCE_NUM
-                }
-            }
-            $expRaw = $usage.endDate
-            if ($null -eq $expRaw) { $expRaw = $usage.expire_at }
-            if ($null -eq $expRaw) { $expRaw = $usage.expires_at }
-            if ($null -ne $expRaw) {
-                try {
-                    if ($expRaw -match '^\d+$') {
-                        $ts = [long]$expRaw / 1000
-                        $date = [DateTimeOffset]::FromUnixTimeSeconds([long]$ts)
-                        $result.EXPIRES = $date.ToString("yyyy-MM-dd")
-                    } else { $result.EXPIRES = $expRaw.ToString() }
-                } catch { $result.EXPIRES = $expRaw.ToString() }
-            }
-        } catch {
-            $result.BALANCE = 0; $result.BALANCE_NUM = 0; $result.RAW = "http_error"; $result.EXPIRES = "Invalid key"
+        $headers = @{
+            "Authorization" = "Bearer $Key"
+            "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         }
+        for ($attempt = 1; $attempt -le $Retries; $attempt++) {
+            try {
+                $response = Invoke-RestMethod -Uri "https://app.factory.ai/api/organization/members/chat-usage" `
+                    -Headers $headers -Method Get -TimeoutSec $Timeout -ErrorAction Stop
+                $usage = $response.usage
+                if ($null -eq $usage) { $result.RAW = "no_usage"; return $result }
+                $section = $null
+                foreach ($s in @($usage.standard, $usage.premium, $usage.total, $usage.main)) {
+                    if ($null -ne $s) { $section = $s; break }
+                }
+                if ($null -ne $section) {
+                    $total = $section.totalAllowance
+                    if ($null -eq $total) { $total = $section.basicAllowance }
+                    if ($null -eq $total) { $total = $section.allowance }
+                    $used = $section.orgTotalTokensUsed
+                    if ($null -eq $used) { $used = $section.used }
+                    if ($null -eq $used) { $used = $section.tokensUsed }
+                    if ($null -eq $used) { $used = 0 }
+                    $overage = $section.orgOverageUsed
+                    if ($null -eq $overage) { $overage = 0 }
+                    $used = $used + $overage
+                    if ($null -ne $total) {
+                        $result.TOTAL = [long]$total
+                        $result.USED = [long]$used
+                        $result.BALANCE_NUM = [long]($total - $used)
+                        $result.BALANCE = $result.BALANCE_NUM
+                    }
+                }
+                $expRaw = $usage.endDate
+                if ($null -eq $expRaw) { $expRaw = $usage.expire_at }
+                if ($null -eq $expRaw) { $expRaw = $usage.expires_at }
+                if ($null -ne $expRaw) {
+                    try {
+                        if ($expRaw -match '^\d+$') {
+                            $ts = [long]$expRaw / 1000
+                            $date = [DateTimeOffset]::FromUnixTimeSeconds([long]$ts)
+                            $result.EXPIRES = $date.ToString("yyyy-MM-dd")
+                        } else { $result.EXPIRES = $expRaw.ToString() }
+                    } catch { $result.EXPIRES = $expRaw.ToString() }
+                }
+                return $result
+            } catch [System.Net.WebException] {
+                $statusCode = [int]$_.Exception.Response.StatusCode
+                if ($statusCode -ge 400 -and $statusCode -lt 500) {
+                    $result.RAW = "http_$statusCode"; $result.EXPIRES = "Invalid key"
+                    return $result
+                }
+                if ($attempt -lt $Retries) { Start-Sleep -Milliseconds 500 }
+            } catch {
+                if ($attempt -lt $Retries) { Start-Sleep -Milliseconds 500 }
+            }
+        }
+        $result.RAW = "http_error"; $result.EXPIRES = "Invalid key"
         return $result
     }
     
@@ -611,7 +639,7 @@ function Fetch-UsageParallel {
     for ($i = 0; $i -lt $Keys.Length; $i++) {
         $ps = [powershell]::Create()
         $ps.RunspacePool = $runspacePool
-        [void]$ps.AddScript($scriptBlock).AddArgument($Keys[$i]).AddArgument($timeout)
+        [void]$ps.AddScript($scriptBlock).AddArgument($Keys[$i]).AddArgument($timeout).AddArgument($retries)
         $jobs += @{ Index = $i; PS = $ps; Handle = $ps.BeginInvoke() }
     }
     

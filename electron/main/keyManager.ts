@@ -183,6 +183,9 @@ export async function getCurrentKey(): Promise<KeyInfo | null> {
   return keys.find(k => k.isCurrent) || null;
 }
 
+const API_TIMEOUT = 8000;
+const API_RETRIES = 3;
+
 async function fetchUsage(key: string): Promise<KeyUsage> {
   const result: KeyUsage = {
     balance: 0,
@@ -192,59 +195,75 @@ async function fetchUsage(key: string): Promise<KeyUsage> {
     raw: '',
   };
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
+  for (let attempt = 1; attempt <= API_RETRIES; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), API_TIMEOUT);
 
-    const response = await fetch(API_URL, {
-      headers: {
-        'Authorization': `Bearer ${key}`,
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-      },
-      signal: controller.signal,
-    });
+      const response = await fetch(API_URL, {
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        },
+        signal: controller.signal,
+      });
 
-    clearTimeout(timeout);
+      clearTimeout(timeout);
 
-    if (!response.ok) {
-      result.raw = `http_${response.status}`;
-      result.expires = 'Invalid key';
-      return result;
-    }
-
-    const data = await response.json() as { usage?: any };
-    const usage = data.usage;
-
-    if (!usage) {
-      result.raw = 'no_usage';
-      return result;
-    }
-
-    const section = usage.standard || usage.premium || usage.total || usage.main;
-    if (section) {
-      const total = section.totalAllowance ?? section.basicAllowance ?? section.allowance;
-      let used = section.orgTotalTokensUsed ?? section.used ?? section.tokensUsed ?? 0;
-      used += section.orgOverageUsed ?? 0;
-
-      if (total != null) {
-        result.total = total;
-        result.used = used;
-        result.balance = total - used;
+      if (!response.ok) {
+        if (response.status >= 400 && response.status < 500) {
+          result.raw = `http_${response.status}`;
+          result.expires = 'Invalid key';
+          return result;
+        }
+        if (attempt < API_RETRIES) {
+          await new Promise(r => setTimeout(r, 500));
+          continue;
+        }
+        result.raw = `http_${response.status}`;
+        result.expires = 'Error';
+        return result;
       }
-    }
 
-    const expRaw = usage.endDate ?? usage.expire_at ?? usage.expires_at;
-    if (expRaw != null) {
-      if (typeof expRaw === 'number' || /^\d+$/.test(String(expRaw))) {
-        const ts = Number(expRaw) / 1000;
-        result.expires = new Date(ts * 1000).toISOString().split('T')[0];
-      } else {
-        result.expires = String(expRaw);
+      const data = await response.json() as { usage?: any };
+      const usage = data.usage;
+
+      if (!usage) {
+        result.raw = 'no_usage';
+        return result;
       }
+
+      const section = usage.standard || usage.premium || usage.total || usage.main;
+      if (section) {
+        const total = section.totalAllowance ?? section.basicAllowance ?? section.allowance;
+        let used = section.orgTotalTokensUsed ?? section.used ?? section.tokensUsed ?? 0;
+        used += section.orgOverageUsed ?? 0;
+
+        if (total != null) {
+          result.total = total;
+          result.used = used;
+          result.balance = total - used;
+        }
+      }
+
+      const expRaw = usage.endDate ?? usage.expire_at ?? usage.expires_at;
+      if (expRaw != null) {
+        if (typeof expRaw === 'number' || /^\d+$/.test(String(expRaw))) {
+          const ts = Number(expRaw) / 1000;
+          result.expires = new Date(ts * 1000).toISOString().split('T')[0];
+        } else {
+          result.expires = String(expRaw);
+        }
+      }
+      return result;
+    } catch (error: any) {
+      if (attempt < API_RETRIES) {
+        await new Promise(r => setTimeout(r, 500));
+        continue;
+      }
+      result.raw = 'fetch_error';
+      result.expires = 'Error';
     }
-  } catch (error: any) {
-    result.raw = 'fetch_error';
-    result.expires = 'Error';
   }
 
   return result;
