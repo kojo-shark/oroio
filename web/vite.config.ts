@@ -238,6 +238,46 @@ Command instructions here.
               return sendJson({ success: true })
             }
             
+            // BYOK (Custom Models)
+            if (req.url === '/api/byok/list') {
+              const configFile = path.join(FACTORY_DIR, 'config.json')
+              try {
+                const config = JSON.parse(fs.readFileSync(configFile, 'utf-8'))
+                return sendJson(config.custom_models || [])
+              } catch {
+                return sendJson([])
+              }
+            }
+            if (req.url === '/api/byok/remove') {
+              const configFile = path.join(FACTORY_DIR, 'config.json')
+              try {
+                const config = JSON.parse(fs.readFileSync(configFile, 'utf-8'))
+                if (config.custom_models && data.index >= 0 && data.index < config.custom_models.length) {
+                  config.custom_models.splice(data.index, 1)
+                  fs.writeFileSync(configFile, JSON.stringify(config, null, 2))
+                }
+                return sendJson({ success: true })
+              } catch {
+                return sendJson({ success: true })
+              }
+            }
+            if (req.url === '/api/byok/update') {
+              const configFile = path.join(FACTORY_DIR, 'config.json')
+              let config: any = {}
+              try {
+                config = JSON.parse(fs.readFileSync(configFile, 'utf-8'))
+              } catch {}
+              if (!config.custom_models) config.custom_models = []
+              if (data.index === -1) {
+                config.custom_models.push(data.config)
+              } else if (data.index >= 0 && data.index < config.custom_models.length) {
+                config.custom_models[data.index] = data.config
+              }
+              fs.mkdirSync(FACTORY_DIR, { recursive: true })
+              fs.writeFileSync(configFile, JSON.stringify(config, null, 2))
+              return sendJson({ success: true })
+            }
+            
             // DK config
             if (req.url === '/api/dk/config') {
               const configFile = path.join(OROIO_DIR, 'config')

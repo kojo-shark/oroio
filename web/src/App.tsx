@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Key, Sparkles, Terminal, Bot, Plug, Github, Volume2, VolumeX, Sun, Moon, Command, Settings, Check, X } from 'lucide-react';
+import { Key, Sparkles, Terminal, Bot, Plug, Github, Volume2, VolumeX, Sun, Moon, Command, Settings, Check, X, Blocks, Cpu } from 'lucide-react';
 import { Kbd } from '@/components/ui/kbd';
 import { useSound } from '@/hooks/useSound';
 import { Toaster } from 'sonner';
@@ -8,11 +8,12 @@ import SkillsManager from '@/components/SkillsManager';
 import CommandsManager from '@/components/CommandsManager';
 import DroidsManager from '@/components/DroidsManager';
 import McpManager from '@/components/McpManager';
+import ByokManager from '@/components/ByokManager';
 import PinDialog from '@/components/PinDialog';
 import { cn } from '@/lib/utils';
 import { checkAuth, authenticate, isElectron, checkDk, getDkConfig, setDkConfig, type DkConfig } from '@/utils/api';
 
-type Tab = 'keys' | 'commands' | 'skills' | 'droids' | 'mcp';
+type Tab = 'keys' | 'commands' | 'skills' | 'droids' | 'mcp' | 'byok' | 'extensions';
 
 const tabs: { id: Tab; label: string; icon: typeof Key }[] = [
   { id: 'keys', label: 'KEYS', icon: Key },
@@ -20,6 +21,8 @@ const tabs: { id: Tab; label: string; icon: typeof Key }[] = [
   { id: 'skills', label: 'SKILLS', icon: Sparkles },
   { id: 'droids', label: 'DROIDS', icon: Bot },
   { id: 'mcp', label: 'MCP', icon: Plug },
+  { id: 'byok', label: 'BYOK', icon: Cpu },
+  { id: 'extensions', label: 'EXT', icon: Blocks },
 ];
 
 export default function App() {
@@ -373,6 +376,14 @@ export default function App() {
                   {activeTab === 'skills' && <SkillsManager />}
                   {activeTab === 'droids' && <DroidsManager />}
                   {activeTab === 'mcp' && <McpManager />}
+                  {activeTab === 'byok' && <ByokManager />}
+                  {activeTab === 'extensions' && (
+                    <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                      <Blocks className="h-10 w-10 mb-3 opacity-40" />
+                      <p className="text-sm">Extensions coming soon</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">Custom plugins and integrations</p>
+                    </div>
+                  )}
                 </>
               )}
             </main>
@@ -468,6 +479,14 @@ export default function App() {
               {activeTab === 'skills' && <SkillsManager />}
               {activeTab === 'droids' && <DroidsManager />}
               {activeTab === 'mcp' && <McpManager />}
+              {activeTab === 'byok' && <ByokManager />}
+              {activeTab === 'extensions' && (
+                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                  <Blocks className="h-10 w-10 mb-3 opacity-40" />
+                  <p className="text-sm">Extensions coming soon</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Custom plugins and integrations</p>
+                </div>
+              )}
             </>
           )}
         </main>

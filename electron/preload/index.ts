@@ -26,6 +26,18 @@ export interface McpServer {
   env?: Record<string, string>;
 }
 
+export interface CustomModel {
+  model_display_name?: string;
+  model: string;
+  base_url: string;
+  api_key: string;
+  provider: 'anthropic' | 'openai' | 'generic-chat-completion-api';
+  max_tokens?: number;
+  supports_images?: boolean;
+  extra_args?: Record<string, unknown>;
+  extra_headers?: Record<string, string>;
+}
+
 export interface DkCheckResult {
   installed: boolean;
   installCmd: string;
@@ -75,6 +87,10 @@ export interface OroioAPI {
   removeMcpServer: (name: string) => Promise<void>;
   updateMcpServer: (name: string, config: Omit<McpServer, 'name'>) => Promise<void>;
   openMcpConfig: () => Promise<void>;
+  // BYOK (Custom Models)
+  listCustomModels: () => Promise<CustomModel[]>;
+  removeCustomModel: (index: number) => Promise<void>;
+  updateCustomModel: (index: number, config: CustomModel) => Promise<void>;
   // Utilities
   openPath: (path: string) => Promise<void>;
 }
@@ -127,6 +143,10 @@ const api: OroioAPI = {
   removeMcpServer: (name: string) => ipcRenderer.invoke('mcp:remove', name),
   updateMcpServer: (name: string, config: Omit<McpServer, 'name'>) => ipcRenderer.invoke('mcp:update', name, config),
   openMcpConfig: () => ipcRenderer.invoke('mcp:openConfig'),
+  // BYOK (Custom Models)
+  listCustomModels: () => ipcRenderer.invoke('byok:list'),
+  removeCustomModel: (index: number) => ipcRenderer.invoke('byok:remove', index),
+  updateCustomModel: (index: number, config: CustomModel) => ipcRenderer.invoke('byok:update', index, config),
   // Utilities
   openPath: (p: string) => ipcRenderer.invoke('util:openPath', p),
 };

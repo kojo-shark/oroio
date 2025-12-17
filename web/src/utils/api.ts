@@ -230,6 +230,18 @@ export interface McpServer {
   env?: Record<string, string>;
 }
 
+export interface CustomModel {
+  model_display_name?: string;
+  model: string;
+  base_url: string;
+  api_key: string;
+  provider: 'anthropic' | 'openai' | 'generic-chat-completion-api';
+  max_tokens?: number;
+  supports_images?: boolean;
+  extra_args?: Record<string, unknown>;
+  extra_headers?: Record<string, string>;
+}
+
 // Skills API
 export async function listSkills(): Promise<Skill[]> {
   if (isElectron) {
@@ -410,6 +422,41 @@ export async function updateMcpServer(name: string, config: Omit<McpServer, 'nam
   if (!data.success) throw new Error(data.error);
 }
 
+// BYOK (Custom Models) API
+export async function listCustomModels(): Promise<CustomModel[]> {
+  if (isElectron) {
+    return window.oroio.listCustomModels();
+  }
+  const res = await fetch('/api/byok/list', { method: 'POST', headers: getAuthHeaders() });
+  return res.json();
+}
+
+export async function removeCustomModel(index: number): Promise<void> {
+  if (isElectron) {
+    return window.oroio.removeCustomModel(index);
+  }
+  const res = await fetch('/api/byok/remove', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ index }),
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error);
+}
+
+export async function updateCustomModel(index: number, config: CustomModel): Promise<void> {
+  if (isElectron) {
+    return window.oroio.updateCustomModel(index, config);
+  }
+  const res = await fetch('/api/byok/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ index, config }),
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error);
+}
+
 // dk CLI check (Electron only)
 export async function checkDk(): Promise<DkCheckResult | null> {
   if (!isElectron) {
@@ -497,6 +544,10 @@ declare global {
       removeMcpServer: (name: string) => Promise<void>;
       updateMcpServer: (name: string, config: Omit<McpServer, 'name'>) => Promise<void>;
       openMcpConfig: () => Promise<void>;
+      // BYOK (Custom Models)
+      listCustomModels: () => Promise<CustomModel[]>;
+      removeCustomModel: (index: number) => Promise<void>;
+      updateCustomModel: (index: number, config: CustomModel) => Promise<void>;
       // Utilities
       openPath: (path: string) => Promise<void>;
     };
