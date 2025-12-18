@@ -50,6 +50,7 @@ remove_alias() {
 
 main() {
   local prefix="${DK_PREFIX:-$HOME/.local/bin}"
+  local quiet=0
   local -a summary=()
 
   while [ $# -gt 0 ]; do
@@ -57,6 +58,9 @@ main() {
     --prefix)
       shift || die "--prefix 需要路径"
       prefix="$1"
+      ;;
+    --quiet)
+      quiet=1
       ;;
     -h | --help)
       usage
@@ -122,6 +126,9 @@ main() {
   for i in "${!summary[@]}"; do
     printf '  %d. %s\n' "$((i + 1))" "${summary[$i]}"
   done
+  if [ "$quiet" -eq 0 ]; then
+    printf '\n提示: 当前终端的 droid alias 仍有效，请执行 \033[36munalias droid\033[0m 或重新打开终端。\n'
+  fi
 }
 
 main "$@"

@@ -84,7 +84,7 @@ main() {
   uninstall_script=$(fetch_script "uninstall.sh")
   install_script=$(fetch_script "install.sh")
 
-  bash "$uninstall_script" --prefix "$prefix"
+  bash "$uninstall_script" --prefix "$prefix" --quiet
 
   bash "$install_script" --prefix "$prefix" --reinstall
 
