@@ -815,12 +815,12 @@ class OroioHandler(http.server.SimpleHTTPRequestHandler):
         try:
             config = self._get_factory_config()
             models = config.get('custom_models', [])
-            if index is None:
-                # Add new model
+            if index is None or int(index) < 0:
+                # Add new model (index is None or -1)
                 models.append(model_config)
             else:
                 idx = int(index)
-                if idx < 0 or idx >= len(models):
+                if idx >= len(models):
                     self.send_json({'success': False, 'error': 'Index out of range'})
                     return
                 models[idx] = model_config
