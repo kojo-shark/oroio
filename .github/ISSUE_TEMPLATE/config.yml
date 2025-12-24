@@ -1,5 +1,0 @@
-blank_issues_enabled: false
-contact_links:
-  - name: 使用问题 / Questions
-    url: https://github.com/notdp/oroio/discussions
-    about: 使用问题请到 Discussions 讨论，Issue 仅用于 Bug 和 Feature Request
